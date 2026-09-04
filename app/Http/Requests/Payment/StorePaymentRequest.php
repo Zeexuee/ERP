@@ -17,6 +17,9 @@ class StorePaymentRequest extends FormRequest
             'amount' => ['required', 'numeric', 'min:1'],
             'payment_method' => ['required', 'string', 'max:100'],
             'payment_date' => ['required', 'date'],
+            'pic_name' => ['required', 'string', 'max:255'],
+            'proof_file' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
+            'signature' => ['nullable', 'string'],
         ];
     }
 }

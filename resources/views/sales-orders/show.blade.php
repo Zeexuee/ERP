@@ -42,15 +42,6 @@
                         Stok Ready (READY)
                     </button>
                 </form>
-            @elseif($salesOrder->status->value === 'processing')
-                <form action="{{ route('sales-orders.update-status', $salesOrder) }}" method="POST">
-                    @csrf
-                    @method('PATCH')
-                    <input type="hidden" name="status" value="ready">
-                    <button type="submit" class="px-5 py-2 rounded-full btn-dark text-xs">
-                        Produksi Selesai (READY)
-                    </button>
-                </form>
             @elseif($salesOrder->status->value === 'ready')
                 <form action="{{ route('sales-orders.update-status', $salesOrder) }}" method="POST">
                     @csrf
@@ -60,12 +51,6 @@
                         Selesaikan Order (COMPLETED)
                     </button>
                 </form>
-            @endif
-
-            @if(!in_array($salesOrder->status->value, ['draft', 'cancelled']))
-                <button type="button" onclick="document.getElementById('invoiceModal').classList.remove('hidden')" class="px-6 py-2.5 rounded-full btn-dark text-xs font-bold">
-                    Terbitkan Invoice
-                </button>
             @endif
 
             <a href="{{ route('sales-orders.index') }}" class="text-xs font-bold text-slate-500 hover:text-slate-900">Kembali</a>
@@ -123,7 +108,7 @@
                                 {{ $item->product->name }}
                                 <span class="block text-xs font-mono text-slate-500 font-normal">{{ $item->product->sku }}</span>
                             </td>
-                            <td class="px-4 py-3 text-center font-bold text-slate-900">{{ $item->quantity }} unit</td>
+                            <td class="px-4 py-3 text-center font-bold text-slate-900">{{ $item->quantity }} {{ $item->unit ?? 'kg' }}</td>
                             <td class="px-4 py-3 text-right text-slate-800 font-semibold">Rp {{ number_format($item->unit_price, 0, ',', '.') }}</td>
                             <td class="px-4 py-3 text-right font-extrabold text-slate-900">Rp {{ number_format($item->subtotal, 0, ',', '.') }}</td>
                         </tr>
@@ -138,26 +123,26 @@
             </table>
         </div>
     </div>
-</div>
 
-<!-- Modal Glassmorphism Terbitkan Invoice (Liquid Glass Dark Neutral Buttons) -->
-<div id="invoiceModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-md hidden">
-    <div class="apple-glass-panel max-w-md w-full p-8 rounded-3xl border border-white shadow-2xl relative">
-        <h3 class="text-xl font-extrabold text-slate-900 mb-1">Terbitkan Invoice Baru</h3>
-        <p class="text-xs text-slate-500 mb-5 font-medium">Invoice dibuat berdasarkan total Sales Order {{ $salesOrder->order_number }}.</p>
+    <!-- PIC & Signature Card -->
+    @if($salesOrder->pic_name || $salesOrder->signature)
+        <div class="apple-glass-card rounded-2xl p-6 border border-white space-y-4">
+            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Penanggung Jawab Order</h3>
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                <div>
+                    <span class="text-xs text-slate-500 block uppercase font-bold tracking-wider">Nama Penanggung Jawab (PIC)</span>
+                    <p class="text-base font-extrabold text-slate-900 mt-0.5">{{ $salesOrder->pic_name ?? '—' }}</p>
+                    <p class="text-xs text-slate-400 mt-1 font-medium">Staf Penjualan / Otorisator Sales Order</p>
+                </div>
 
-        <form action="{{ route('sales-orders.generate-invoice', $salesOrder) }}" method="POST" class="space-y-4">
-            @csrf
-            <div>
-                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Tanggal Jatuh Tempo (Due Date) *</label>
-                <input type="date" name="due_date" value="{{ \Carbon\Carbon::now()->addDays(30)->toDateString() }}" required class="w-full rounded-xl apple-input px-4 py-2.5 text-sm font-medium">
+                @if($salesOrder->signature)
+                    <div class="border border-slate-900/15 rounded-2xl bg-white p-3 shadow-inner text-center">
+                        <span class="text-[10px] text-slate-400 block uppercase font-bold mb-1 tracking-wider">Tanda Tangan Digital</span>
+                        <img src="{{ $salesOrder->signature }}" alt="Tanda Tangan PIC" class="h-20 max-w-[200px] object-contain mx-auto">
+                    </div>
+                @endif
             </div>
-
-            <div class="flex justify-end gap-3 pt-4 border-t border-slate-900/10">
-                <button type="button" onclick="document.getElementById('invoiceModal').classList.add('hidden')" class="px-5 py-2.5 rounded-full btn-subtle text-sm">Batal</button>
-                <button type="submit" class="px-6 py-2.5 rounded-full btn-dark text-sm">Terbitkan Invoice</button>
-            </div>
-        </form>
-    </div>
+        </div>
+    @endif
 </div>
 @endsection

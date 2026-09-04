@@ -22,13 +22,15 @@ class SalesOrderService
     public function createSalesOrder(array $data): SalesOrder
     {
         return DB::transaction(function () use ($data) {
-            $orderNumber = 'SO-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
+            $orderNumber = 'SO-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -4));
 
             $salesOrder = SalesOrder::create([
                 'customer_id' => $data['customer_id'],
                 'order_number' => $orderNumber,
-                'status' => SalesOrderStatus::DRAFT,
+                'status' => SalesOrderStatus::PROCESSING,
                 'total_amount' => 0,
+                'pic_name' => $data['pic_name'] ?? null,
+                'signature' => $data['signature'] ?? null,
             ]);
 
             $totalAmount = 0;
@@ -37,12 +39,14 @@ class SalesOrderService
                 $product = Product::findOrFail($item['product_id']);
                 $unitPrice = $item['unit_price'] ?? $product->price;
                 $quantity = $item['quantity'];
+                $unit = $item['unit'] ?? $product->unit ?? 'kg';
                 $subtotal = $unitPrice * $quantity;
 
                 SalesOrderItem::create([
                     'sales_order_id' => $salesOrder->id,
                     'product_id' => $product->id,
                     'quantity' => $quantity,
+                    'unit' => $unit,
                     'unit_price' => $unitPrice,
                     'subtotal' => $subtotal,
                 ]);
@@ -52,7 +56,13 @@ class SalesOrderService
 
             $salesOrder->update(['total_amount' => $totalAmount]);
 
-            return $salesOrder->load(['customer', 'items.product']);
+            // Automatically create Production Request
+            $this->triggerProductionRequest($salesOrder);
+
+            // Automatically create Invoice
+            $this->generateInvoice($salesOrder);
+
+            return $salesOrder->load(['customer', 'items.product', 'productionRequest', 'invoices']);
         });
     }
 
@@ -79,7 +89,7 @@ class SalesOrderService
 
         $allowedTransitions = $validTransitions[$currentStatus->value] ?? [];
 
-        if (!in_array($newStatus, $allowedTransitions, true)) {
+        if (! in_array($newStatus, $allowedTransitions, true)) {
             throw new InvalidArgumentException(
                 "Invalid status transition from '{$currentStatus->value}' to '{$newStatus->value}'."
             );
@@ -89,7 +99,7 @@ class SalesOrderService
             $salesOrder->update(['status' => $newStatus]);
 
             // If transitioning to PROCESSING, automatically trigger a Production Request if not already triggered
-            if ($newStatus === SalesOrderStatus::PROCESSING && !$salesOrder->productionRequest) {
+            if ($newStatus === SalesOrderStatus::PROCESSING && ! $salesOrder->productionRequest) {
                 $this->triggerProductionRequest($salesOrder);
             }
 
@@ -106,7 +116,7 @@ class SalesOrderService
             return $salesOrder->productionRequest;
         }
 
-        $requestNumber = 'PR-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
+        $requestNumber = 'PR-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -4));
 
         return ProductionRequest::create([
             'sales_order_id' => $salesOrder->id,
@@ -122,11 +132,11 @@ class SalesOrderService
     public function generateInvoice(SalesOrder $salesOrder, ?string $dueDate = null): Invoice
     {
         if (in_array($salesOrder->status, [SalesOrderStatus::DRAFT, SalesOrderStatus::CANCELLED], true)) {
-            throw new InvalidArgumentException("Cannot generate invoice for a Sales Order in DRAFT or CANCELLED status.");
+            throw new InvalidArgumentException('Cannot generate invoice for a Sales Order in DRAFT or CANCELLED status.');
         }
 
         return DB::transaction(function () use ($salesOrder, $dueDate) {
-            $invoiceNumber = 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
+            $invoiceNumber = 'INV-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -4));
 
             return Invoice::create([
                 'sales_order_id' => $salesOrder->id,

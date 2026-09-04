@@ -19,7 +19,8 @@
                     <tr>
                         <th class="px-6 py-4">No. Permintaan</th>
                         <th class="px-6 py-4">Sales Order</th>
-                        <th class="px-6 py-4">Pelanggan</th>
+                        <th class="px-6 py-4">Pemesan / Pelanggan</th>
+                        <th class="px-6 py-4">Detail Produk</th>
                         <th class="px-6 py-4">Tanggal Permintaan</th>
                         <th class="px-6 py-4">Status Produksi</th>
                         <th class="px-6 py-4 text-right">Aksi</th>
@@ -27,15 +28,36 @@
                 </thead>
                 <tbody class="divide-y divide-slate-900/10">
                     @forelse($productionRequests as $pr)
-                        <tr class="hover:bg-white/60 transition">
+                        <tr class="hover:bg-white/60 transition align-top">
                             <td class="px-6 py-4 font-mono text-xs font-bold text-slate-900">
                                 <a href="{{ route('production-requests.show', $pr) }}" class="hover:underline">{{ $pr->request_number }}</a>
                             </td>
                             <td class="px-6 py-4 font-mono text-xs font-bold text-slate-900">
                                 <a href="{{ route('sales-orders.show', $pr->salesOrder) }}" class="hover:underline">{{ $pr->salesOrder->order_number }}</a>
                             </td>
-                            <td class="px-6 py-4 font-bold text-slate-900">{{ $pr->salesOrder->customer->name }}</td>
-                            <td class="px-6 py-4 text-slate-600 font-medium">{{ $pr->requested_date->format('d M Y, H:i') }}</td>
+                            <td class="px-6 py-4">
+                                <span class="font-bold text-slate-900 block">{{ $pr->salesOrder->customer->name }}</span>
+                                @php
+                                    $inv = $pr->salesOrder->invoices->first();
+                                    $payStatus = $inv ? strtoupper($inv->status->value) : 'UNBILLED';
+                                @endphp
+                                <span class="inline-block mt-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded-full badge-dark">
+                                    Status Bayar: {{ $payStatus }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="space-y-1">
+                                    @forelse($pr->salesOrder->items as $item)
+                                        <div class="text-xs text-slate-800 flex items-center gap-1.5">
+                                            <span class="font-bold text-slate-900">• {{ $item->product->name }}</span>
+                                            <span class="font-mono text-slate-600 font-medium">({{ $item->quantity }} {{ $item->unit ?? 'kg' }})</span>
+                                        </div>
+                                    @empty
+                                        <span class="text-xs text-slate-400 italic">Tidak ada item produk.</span>
+                                    @endforelse
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 font-medium text-xs">{{ $pr->requested_date->format('d M Y, H:i') }}</td>
                             <td class="px-6 py-4">
                                 <span class="px-3 py-1 rounded-full text-xs font-bold badge-dark">
                                     {{ strtoupper($pr->status->value) }}
@@ -46,7 +68,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400 font-medium">Belum ada permintaan produksi.</td></tr>
+                        <tr><td colspan="7" class="px-6 py-8 text-center text-slate-400 font-medium">Belum ada permintaan produksi.</td></tr>
                     @endforelse
                 </tbody>
             </table>

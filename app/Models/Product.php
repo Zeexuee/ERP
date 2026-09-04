@@ -15,6 +15,7 @@ class Product extends Model
         'name',
         'price',
         'stock_quantity',
+        'unit',
     ];
 
     protected $casts = [
@@ -30,5 +31,26 @@ class Product extends Model
     public function salesOrderItems(): HasMany
     {
         return $this->hasMany(SalesOrderItem::class);
+    }
+
+    public function branches(): HasMany
+    {
+        return $this->hasMany(ProductBranch::class);
+    }
+
+    /**
+     * Total stock calculated from branches if branches are registered, otherwise fallback to stock_quantity.
+     */
+    public function getTotalStockAttribute(): int
+    {
+        if ($this->relationLoaded('branches') && $this->branches->isNotEmpty()) {
+            return (int) $this->branches->sum('quantity');
+        }
+
+        if ($this->branches()->exists()) {
+            return (int) $this->branches()->sum('quantity');
+        }
+
+        return (int) $this->stock_quantity;
     }
 }

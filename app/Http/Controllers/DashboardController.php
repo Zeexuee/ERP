@@ -26,7 +26,7 @@ class DashboardController extends Controller
 
         $recentOrders = SalesOrder::with('customer')->latest()->take(5)->get();
         $recentPayments = Payment::with('invoice.salesOrder.customer')->latest()->take(5)->get();
-        $recentProductionRequests = ProductionRequest::with('salesOrder.customer')->latest()->take(5)->get();
+        $recentProductionRequests = ProductionRequest::with(['salesOrder.customer', 'salesOrder.items.product', 'salesOrder.invoices'])->latest()->take(5)->get();
 
         return view('dashboard', compact('stats', 'recentOrders', 'recentPayments', 'recentProductionRequests'));
     }

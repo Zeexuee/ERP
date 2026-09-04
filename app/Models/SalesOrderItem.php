@@ -14,12 +14,13 @@ class SalesOrderItem extends Model
         'sales_order_id',
         'product_id',
         'quantity',
+        'unit',
         'unit_price',
         'subtotal',
     ];
 
     protected $casts = [
-        'quantity' => 'integer',
+        'quantity' => 'float',
         'unit_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
     ];

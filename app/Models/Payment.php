@@ -16,6 +16,9 @@ class Payment extends Model
         'amount',
         'payment_method',
         'payment_date',
+        'proof_file',
+        'pic_name',
+        'signature',
     ];
 
     protected $casts = [

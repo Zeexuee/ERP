@@ -16,9 +16,12 @@ class StoreSalesOrderRequest extends FormRequest
         return [
             'customer_id' => ['required', 'exists:customers,id'],
             'quotation_id' => ['nullable', 'exists:quotations,id'],
+            'pic_name' => ['nullable', 'string', 'max:255'],
+            'signature' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'exists:products,id'],
-            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
+            'items.*.unit' => ['nullable', 'string', 'max:50'],
             'items.*.unit_price' => ['nullable', 'numeric', 'min:0'],
         ];
     }

@@ -18,6 +18,8 @@ class SalesOrder extends Model
         'order_number',
         'status',
         'total_amount',
+        'pic_name',
+        'signature',
     ];
 
     protected $casts = [

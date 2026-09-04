@@ -35,4 +35,18 @@ class Invoice extends Model
     {
         return $this->hasMany(Payment::class);
     }
+
+    public function getPaidAmountAttribute(): float
+    {
+        if ($this->relationLoaded('payments')) {
+            return (float) $this->payments->sum('amount');
+        }
+
+        return (float) $this->payments()->sum('amount');
+    }
+
+    public function getRemainingAmountAttribute(): float
+    {
+        return max(0, (float) $this->total_amount - $this->paid_amount);
+    }
 }
