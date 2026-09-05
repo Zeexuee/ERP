@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\MaterialLog;
 use App\Models\Product;
 use App\Models\SalesOrder;
 use Illuminate\Http\UploadedFile;
@@ -497,6 +498,69 @@ class ExcelImportExportService
         }
 
         return ['success' => $successCount, 'errors' => $errors];
+    }
+
+    // ==========================================
+    // 4. MATERIAL LOGS EXPORT
+    // ==========================================
+
+    public function exportMaterialLogs(): StreamedResponse
+    {
+        $filename = 'riwayat_alur_barang_gudang_'.date('Ymd_His').'.csv';
+
+        return response()->streamDownload(function () {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($handle, [
+                'Jenis Alur',
+                'No. Referensi',
+                'Kode Bahan',
+                'Nama Bahan Baku',
+                'Kuantitas',
+                'Satuan',
+                'Asal / Tujuan / Keterangan',
+                'Tanggal & Waktu',
+                'Petugas',
+                'Catatan',
+            ]);
+
+            MaterialLog::with('material')
+                ->latest('id')
+                ->take(60)
+                ->get()
+                ->each(function ($log) use ($handle) {
+                    $typeStr = match ($log->type) {
+                        'in' => 'Barang Masuk',
+                        'out' => 'Pemakaian Produksi / Sortir',
+                        default => 'Timbang Ulang',
+                    };
+
+                    $qtyFormatted = match ($log->type) {
+                        'in' => "+{$log->quantity}",
+                        'out' => "-{$log->quantity}",
+                        default => "{$log->quantity} (Opname)",
+                    };
+
+                    fputcsv($handle, [
+                        $typeStr,
+                        $log->reference_number ?? '-',
+                        $log->material ? $log->material->code : '-',
+                        $log->material ? $log->material->name : '-',
+                        $qtyFormatted,
+                        $log->unit,
+                        $log->source_or_destination ?? '-',
+                        $log->movement_date ? $log->movement_date->format('d/m/Y H:i').' WIB' : '-',
+                        $log->actor_by ?? '-',
+                        $log->notes ?? '-',
+                    ]);
+                });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
     }
 
     // ==========================================

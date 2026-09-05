@@ -6,30 +6,26 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class MaterialReceipt extends Model
+class MaterialLog extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'receipt_number',
         'material_id',
+        'type',
+        'reference_number',
         'quantity',
-        'ordered_quantity',
         'unit',
-        'unit_cost',
-        'source_or_supplier',
-        'received_date',
-        'received_by',
+        'actor_by',
+        'source_or_destination',
+        'movement_date',
         'notes',
         'signature_path',
-        'image_path',
     ];
 
     protected $casts = [
         'quantity' => 'decimal:2',
-        'ordered_quantity' => 'decimal:2',
-        'unit_cost' => 'decimal:2',
-        'received_date' => 'date',
+        'movement_date' => 'datetime',
     ];
 
     public function material(): BelongsTo

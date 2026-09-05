@@ -12,6 +12,7 @@ use App\Models\ProductionRequest;
 use App\Models\SalesOrder;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Tests\TestCase;
 
 class ProductionWorkflowTest extends TestCase
@@ -77,6 +78,54 @@ class ProductionWorkflowTest extends TestCase
             'production_batch_id' => $batch->id,
             'pic_name' => 'Mandor Pabrik Sentul',
         ]);
+
+        // Verify material log created for material usage (type = out)
+        $this->assertDatabaseHas('material_logs', [
+            'material_id' => $matKayu->id,
+            'type' => 'out',
+            'quantity' => 10.00,
+            'actor_by' => 'Mandor Pabrik Sentul',
+        ]);
+    }
+
+    public function test_production_user_can_create_batch_with_custom_manual_batch_number(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::PRODUCTION]);
+        $product = Product::create([
+            'sku' => 'GHR-MANUAL-001',
+            'name' => 'Gaharu Sana\'i Custom Batch',
+            'price' => 5000000.00,
+            'stock_quantity' => 0,
+            'unit' => 'kg',
+        ]);
+
+        $mat = Material::create([
+            'code' => 'MAT-MAN-01',
+            'name' => 'Kayu Medang',
+            'category' => 'Kayu Dasar',
+            'unit' => 'kg',
+            'stock_quantity' => 100.00,
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->post(route('production.batches.store'), [
+            'batch_number' => 'BATCH-MANUAL-999',
+            'product_id' => $product->id,
+            'target_quantity' => 5.00,
+            'start_date' => '2026-09-05',
+            'pic_name' => 'Mandor Khusus',
+            'materials' => [
+                ['material_id' => $mat->id, 'quantity_used' => 5.00],
+            ],
+        ]);
+
+        $response->assertSessionHas('success');
+        $this->assertDatabaseHas('production_batches', [
+            'batch_number' => 'BATCH-MANUAL-999',
+            'product_id' => $product->id,
+            'pic_name' => 'Mandor Khusus',
+        ]);
     }
 
     public function test_batch_creation_fails_if_material_stock_is_insufficient(): void
@@ -116,7 +165,7 @@ class ProductionWorkflowTest extends TestCase
         $this->assertEquals(2.00, (float) $material->stock_quantity);
     }
 
-    public function test_production_user_can_add_daily_production_log(): void
+    public function test_production_user_can_add_daily_production_log_with_tembak_materials(): void
     {
         $user = User::factory()->create(['role' => UserRole::PRODUCTION]);
         $product = Product::create([
@@ -125,6 +174,14 @@ class ProductionWorkflowTest extends TestCase
             'price' => 4500000.00,
             'stock_quantity' => 0,
         ]);
+        $material = Material::create([
+            'code' => 'MAT-RESIN-001',
+            'name' => 'Resin Liquid Gaharu Premium',
+            'category' => 'Resin',
+            'stock_quantity' => 50.00,
+            'unit' => 'liter',
+            'unit_cost' => 150000,
+        ]);
 
         $batch = ProductionBatch::create([
             'batch_number' => 'BATCH-TEST-001',
@@ -132,7 +189,7 @@ class ProductionWorkflowTest extends TestCase
             'target_quantity' => 10.00,
             'unit' => 'kg',
             'status' => 'in_progress',
-            'stage' => '1. Persiapan Bahan & Sortir Kayu',
+            'stage' => 'Sortir',
             'start_date' => '2026-09-04',
             'pic_name' => 'Mandor Pabrik',
         ]);
@@ -141,22 +198,38 @@ class ProductionWorkflowTest extends TestCase
 
         $response = $this->post(route('production.batches.store-log', $batch), [
             'log_date' => '2026-09-05',
-            'stage' => '2. Infusi / Vacuum Pressure Resin & Minyak',
-            'progress_percentage' => 50,
+            'stage' => 'Tembak',
+            'work_status' => 'selesai',
             'pic_name' => 'Asep Kurniawan',
             'notes' => 'Proses infusi minyak gaharu berjalan lancar pada tekanan 4 bar.',
+            'materials' => [
+                ['material_id' => $material->id, 'quantity_used' => 10.00],
+            ],
         ]);
 
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('production_daily_logs', [
             'production_batch_id' => $batch->id,
-            'stage' => '2. Infusi / Vacuum Pressure Resin & Minyak',
-            'progress_percentage' => 50,
+            'stage' => 'Tembak',
+            'work_status' => 'selesai',
+        ]);
+
+        // Verify material stock decremented from 50 to 40
+        $material->refresh();
+        $this->assertEquals(40.00, (float) $material->stock_quantity);
+
+        // Verify material_logs recorded
+        $this->assertDatabaseHas('material_logs', [
+            'material_id' => $material->id,
+            'type' => 'out',
+            'reference_number' => $batch->batch_number,
+            'quantity' => 10.00,
+            'actor_by' => 'Asep Kurniawan',
         ]);
 
         $batch->refresh();
-        $this->assertEquals('2. Infusi / Vacuum Pressure Resin & Minyak', $batch->stage);
+        $this->assertEquals('Tembak', $batch->stage);
     }
 
     public function test_completing_production_batch_increments_finished_product_stock_and_completes_sales_request(): void
@@ -226,5 +299,57 @@ class ProductionWorkflowTest extends TestCase
         // Verify linked sales production request marked finished
         $pr->refresh();
         $this->assertEquals(ProductionRequestStatus::FINISHED, $pr->status);
+    }
+
+    public function test_completing_production_batch_via_daily_log_stage_selesai(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::PRODUCTION]);
+        $product = Product::create([
+            'sku' => 'GHR-TEST-005',
+            'name' => 'Gaharu Super Selesai',
+            'price' => 5000000.00,
+            'stock_quantity' => 10,
+            'unit' => 'kg',
+        ]);
+
+        $batch = ProductionBatch::create([
+            'batch_number' => 'BATCH-TEST-003',
+            'product_id' => $product->id,
+            'target_quantity' => 15.00,
+            'unit' => 'kg',
+            'status' => 'in_progress',
+            'stage' => 'Testing Bakar',
+            'start_date' => '2026-09-01',
+            'pic_name' => 'Mandor Pabrik',
+        ]);
+
+        $this->actingAs($user);
+
+        $file1 = UploadedFile::fake()->create('foto1.jpg', 100, 'image/jpeg');
+        $file2 = UploadedFile::fake()->create('dokumen1.pdf', 200, 'application/pdf');
+
+        $response = $this->post(route('production.batches.store-log', $batch), [
+            'log_date' => '2026-09-05',
+            'stage' => 'Selesai',
+            // work_status omitted (should default to selesai)
+            'actual_quantity' => 15.00,
+            'pic_name' => 'Admin Produksi',
+            'notes' => 'Pengujian bakar selesai, kualitas grade A super.',
+            'attachments' => [$file1, $file2],
+        ]);
+
+        $response->assertSessionHas('success');
+
+        $batch->refresh();
+        $this->assertEquals('completed', $batch->status);
+        $this->assertEquals(15.00, (float) $batch->actual_quantity);
+
+        $product->refresh();
+        $this->assertEquals(25, $product->stock_quantity);
+
+        $log = $batch->dailyLogs()->where('stage', 'Selesai')->first();
+        $this->assertNotNull($log);
+        $this->assertEquals('selesai', $log->work_status);
+        $this->assertCount(2, $log->attachment_paths);
     }
 }

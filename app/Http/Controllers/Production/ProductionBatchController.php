@@ -4,16 +4,17 @@ namespace App\Http\Controllers\Production;
 
 use App\Enums\ProductionRequestStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Production\StoreProductionBatchRequest;
+use App\Http\Requests\Production\StoreProductionDailyLogRequest;
 use App\Models\Material;
 use App\Models\Product;
 use App\Models\ProductBranch;
 use App\Models\ProductionBatch;
-use App\Models\ProductionBatchMaterial;
 use App\Models\ProductionDailyLog;
 use App\Models\ProductionRequest;
+use App\Services\Production\ProductionBatchService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -84,104 +85,22 @@ class ProductionBatchController extends Controller
     /**
      * Simpan proses produksi baru, alokasikan bahan, dan kurangi stok bahan baku.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(StoreProductionBatchRequest $request, ProductionBatchService $batchService): RedirectResponse
     {
-        $validated = $request->validate([
-            'product_id' => ['required', 'exists:products,id'],
-            'production_request_id' => ['nullable', 'exists:production_requests,id'],
-            'target_quantity' => ['required', 'numeric', 'min:0.01'],
-            'start_date' => ['required', 'date'],
-            'target_completion_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'pic_name' => ['required', 'string', 'max:255'],
-            'notes' => ['nullable', 'string', 'max:1000'],
-            'materials' => ['required', 'array', 'min:1'],
-            'materials.*.material_id' => ['required', 'exists:materials,id'],
-            'materials.*.quantity_used' => ['required', 'numeric', 'min:0.01'],
-        ], [
-            'materials.required' => 'Setidaknya masukkan minimal satu bahan baku yang digunakan untuk produksi.',
-            'materials.min' => 'Setidaknya masukkan minimal satu bahan baku yang digunakan untuk produksi.',
-            'materials.*.material_id.required' => 'Bahan baku wajib dipilih.',
-            'materials.*.quantity_used.required' => 'Jumlah penggunaan bahan wajib diisi.',
-            'materials.*.quantity_used.min' => 'Jumlah penggunaan bahan minimal 0.01.',
-        ]);
-
-        $product = Product::findOrFail($validated['product_id']);
-
-        // Verifikasi ketersediaan stok setiap bahan
-        foreach ($validated['materials'] as $item) {
-            $material = Material::find($item['material_id']);
-            if (! $material || $material->stock_quantity < $item['quantity_used']) {
-                $available = $material ? "{$material->stock_quantity} {$material->unit}" : '0';
-
-                return back()
-                    ->withInput()
-                    ->withErrors([
-                        'materials' => "Stok bahan '{$material?->name}' tidak mencukupi. Tersedia: {$available}, diminta: {$item['quantity_used']} {$material?->unit}.",
-                    ]);
-            }
-        }
-
-        DB::beginTransaction();
         try {
-            $latestBatch = ProductionBatch::latest('id')->first();
-            $batchNumber = 'BATCH-'.date('Y').'-'.str_pad(($latestBatch ? $latestBatch->id + 1 : 1), 3, '0', STR_PAD_LEFT);
-
-            $batch = ProductionBatch::create([
-                'batch_number' => $batchNumber,
-                'product_id' => $product->id,
-                'production_request_id' => $validated['production_request_id'] ?? null,
-                'target_quantity' => $validated['target_quantity'],
-                'actual_quantity' => null,
-                'unit' => $product->unit ?? 'kg',
-                'status' => 'in_progress',
-                'stage' => '1. Persiapan Bahan & Sortir Kayu',
-                'start_date' => $validated['start_date'],
-                'target_completion_date' => $validated['target_completion_date'] ?? null,
-                'pic_name' => $validated['pic_name'],
-                'notes' => $validated['notes'] ?? null,
-            ]);
-
-            // Alokasikan bahan & potong stok bahan baku di gudang
-            foreach ($validated['materials'] as $matItem) {
-                $mat = Material::findOrFail($matItem['material_id']);
-
-                ProductionBatchMaterial::create([
-                    'production_batch_id' => $batch->id,
-                    'material_id' => $mat->id,
-                    'quantity_used' => $matItem['quantity_used'],
-                    'unit' => $mat->unit,
-                ]);
-
-                $mat->decrement('stock_quantity', $matItem['quantity_used']);
-            }
-
-            // Catat log harian awal pengerjaan (Hari ke-1)
-            ProductionDailyLog::create([
-                'production_batch_id' => $batch->id,
-                'log_date' => $validated['start_date'],
-                'stage' => '1. Persiapan Bahan & Sortir Kayu',
-                'progress_percentage' => 15,
-                'pic_name' => $validated['pic_name'],
-                'notes' => "Proses produksi batch #{$batch->batch_number} resmi dimulai. Penimbangan dan alokasi bahan baku selesai dipersiapkan.",
-            ]);
-
-            // Jika terhubung ke antrean Sales, ubah status antrean menjadi In Production
-            if (! empty($validated['production_request_id'])) {
-                $pr = ProductionRequest::find($validated['production_request_id']);
-                if ($pr && $pr->status !== ProductionRequestStatus::FINISHED) {
-                    $pr->update(['status' => ProductionRequestStatus::IN_PRODUCTION]);
-                }
-            }
-
-            DB::commit();
+            $batch = $batchService->createBatch($request->validated());
 
             return redirect()
                 ->route('production.batches.show', $batch)
-                ->with('success', "Proses produksi #{$batch->batch_number} ({$batch->target_quantity} {$batch->unit} {$product->name}) berhasil dibuat dan stok bahan telah dialokasikan.");
+                ->with('success', "Proses produksi #{$batch->batch_number} ({$batch->target_quantity} {$batch->unit} {$batch->product->name}) berhasil dibuat dan stok bahan telah dialokasikan.");
+        } catch (\InvalidArgumentException $e) {
+            return back()
+                ->withInput()
+                ->withErrors(['materials' => $e->getMessage()]);
         } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return back()->withInput()->with('error', 'Gagal memproses pembuatan produksi: '.$e->getMessage());
+            return back()
+                ->withInput()
+                ->with('error', 'Gagal memproses pembuatan produksi: '.$e->getMessage());
         }
     }
 
@@ -198,38 +117,35 @@ class ProductionBatchController extends Controller
         ]);
 
         $branches = ProductBranch::select('branch_name', 'branch_code')->distinct()->get();
+        $materials = Material::orderBy('category')->orderBy('name')->get();
 
-        return view('production.batches.show', compact('batch', 'branches'));
+        return view('production.batches.show', compact('batch', 'branches', 'materials'));
     }
 
     /**
      * Tambah catatan laporan proses harian (Daily Production Log).
      */
-    public function storeDailyLog(Request $request, ProductionBatch $batch): RedirectResponse
+    public function storeDailyLog(StoreProductionDailyLogRequest $request, ProductionBatch $batch, ProductionBatchService $batchService): RedirectResponse
     {
-        $validated = $request->validate([
-            'log_date' => ['required', 'date'],
-            'stage' => ['required', 'string', 'max:100'],
-            'progress_percentage' => ['required', 'integer', 'min:0', 'max:100'],
-            'pic_name' => ['required', 'string', 'max:255'],
-            'notes' => ['required', 'string', 'max:1000'],
-        ]);
+        try {
+            $files = $request->file('attachments') ?? $request->file('attachment');
+            $batchService->storeDailyLog($batch, $request->validated(), $files);
 
-        ProductionDailyLog::create([
-            'production_batch_id' => $batch->id,
-            'log_date' => $validated['log_date'],
-            'stage' => $validated['stage'],
-            'progress_percentage' => $validated['progress_percentage'],
-            'pic_name' => $validated['pic_name'],
-            'notes' => $validated['notes'],
-        ]);
+            $msg = 'Laporan harian berhasil disimpan.';
+            if ($request->validated()['stage'] === 'Selesai') {
+                $msg = "Status produksi batch #{$batch->batch_number} berhasil diselesaikan dan stok barang jadi telah diperbarui.";
+            }
 
-        // Perbarui tahapan saat ini pada batch
-        $batch->update([
-            'stage' => $validated['stage'],
-        ]);
-
-        return back()->with('success', 'Laporan harian tanggal '.Carbon::parse($validated['log_date'])->format('d/m/Y').' berhasil ditambahkan.');
+            return back()->with('success', $msg);
+        } catch (\InvalidArgumentException $e) {
+            return back()
+                ->withInput()
+                ->withErrors(['materials' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            return back()
+                ->withInput()
+                ->with('error', 'Gagal menyimpan laporan harian: '.$e->getMessage());
+        }
     }
 
     /**

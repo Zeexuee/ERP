@@ -66,7 +66,7 @@
                         type="text" 
                         name="search" 
                         value="{{ request('search') }}" 
-                        placeholder="Cari kode/nama/rak..." 
+                        placeholder="Cari kode/nama/kategori..." 
                         class="text-xs px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 w-44 md:w-56 focus:outline-none"
                     >
                 </div>
@@ -90,9 +90,10 @@
                         <th class="py-2.5 px-3">Nama Bahan Baku</th>
                         <th class="py-2.5 px-3">Kategori</th>
                         <th class="py-2.5 px-3 text-right">Stok Gudang</th>
+                        <th class="py-2.5 px-3">Timbang Terakhir</th>
                         <th class="py-2.5 px-3 text-right">Biaya / Unit</th>
-                        <th class="py-2.5 px-3">Lokasi Simpan</th>
                         <th class="py-2.5 px-3 text-center">Status</th>
+                        <th class="py-2.5 px-3 text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-900/5">
@@ -103,7 +104,7 @@
                             </td>
                             <td class="py-3 px-3">
                                 <span class="font-bold text-slate-900 block">{{ $mat->name }}</span>
-                                <span class="text-[10px] text-slate-400">Min. Alert: {{ number_format($mat->minimum_stock, 1) }} {{ $mat->unit }}</span>
+                                <span class="text-[10px] text-slate-500">Min. Alert: {{ number_format($mat->minimum_stock, 1) }} {{ $mat->unit }}</span>
                             </td>
                             <td class="py-3 px-3">
                                 <span class="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-800 border border-slate-200">
@@ -113,11 +114,18 @@
                             <td class="py-3 px-3 text-right font-mono font-bold text-slate-900">
                                 {{ number_format($mat->stock_quantity, 1) }} <span class="font-sans text-[10px] text-slate-500 font-normal">{{ $mat->unit }}</span>
                             </td>
+                            <td class="py-3 px-3 text-slate-700 text-[11px] font-mono">
+                                @if($mat->last_weighed_at)
+                                    <span class="font-semibold text-slate-900 block">{{ $mat->last_weighed_at->format('d/m/Y H:i') }} WIB</span>
+                                    @if($mat->last_weighed_by)
+                                        <span class="text-[10px] text-slate-500 font-sans block">Oleh: {{ $mat->last_weighed_by }}</span>
+                                    @endif
+                                @else
+                                    <span class="text-slate-400">-</span>
+                                @endif
+                            </td>
                             <td class="py-3 px-3 text-right font-mono text-slate-700">
                                 Rp {{ number_format($mat->unit_cost, 0, ',', '.') }}
-                            </td>
-                            <td class="py-3 px-3 text-slate-600">
-                                {{ $mat->storage_location ?? '-' }}
                             </td>
                             <td class="py-3 px-3 text-center">
                                 @if($mat->stock_quantity <= 0)
@@ -134,10 +142,38 @@
                                     </span>
                                 @endif
                             </td>
+                            <td class="py-3 px-3 text-center">
+                                <div class="flex items-center justify-center gap-1.5">
+                                    <button 
+                                        type="button" 
+                                        onclick="openSortModal({{ $mat->id }}, '{{ addslashes($mat->code) }}', '{{ addslashes($mat->name) }}', {{ (float) $mat->stock_quantity }}, '{{ addslashes($mat->unit) }}')" 
+                                        title="Sortir Bahan Baku"
+                                        class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 shadow-sm transition"
+                                    >
+                                        Sortir
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onclick="openRecountModal({{ $mat->id }}, '{{ addslashes($mat->code) }}', '{{ addslashes($mat->name) }}', {{ (float) $mat->stock_quantity }}, '{{ addslashes($mat->unit) }}', '{{ addslashes($mat->last_weighed_by ?? '') }}')" 
+                                        title="Timbang Ulang Stok Opname"
+                                        class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-slate-900 text-white hover:bg-slate-800 shadow-sm transition"
+                                    >
+                                        Timbang Ulang
+                                    </button>
+                                    <button 
+                                        type="button" 
+                                        onclick="openEditModal({{ $mat->id }}, '{{ addslashes($mat->code) }}', '{{ addslashes($mat->name) }}', '{{ addslashes($mat->category) }}', {{ (float) $mat->minimum_stock }})" 
+                                        title="Edit Data Bahan Baku"
+                                        class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 shadow-sm transition"
+                                    >
+                                        Edit
+                                    </button>
+                                </div>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-6 text-center text-slate-400">
+                            <td colspan="8" class="py-6 text-center text-slate-400">
                                 Belum ada data bahan baku gudang.
                             </td>
                         </tr>
@@ -153,57 +189,95 @@
         @endif
     </div>
 
-    <!-- Riwayat Penerimaan Barang Masuk Terakhir -->
+    <!-- Riwayat Alur Barang Gudang (Maximum 60 Data Terakhir) -->
     <div class="apple-glass-panel rounded-3xl p-6 shadow-md">
-        <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-bold text-slate-900">Riwayat Penerimaan Barang Masuk Terakhir</h3>
-            <a href="{{ route('production.materials.create-receipt') }}" class="text-xs font-semibold text-slate-700 hover:underline">
-                + Input Baru
-            </a>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Riwayat Alur Barang Gudang</h3>
+                <p class="text-[11px] text-slate-500 mt-0.5">Menampilkan 60 riwayat alur barang gudang terbaru (terakhir masuk di posisi atas).</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="{{ route('production.materials.export-logs') }}" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+                    <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <span>Export to Excel</span>
+                </a>
+                <a href="{{ route('production.materials.create-receipt') }}" class="px-3 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold shadow-sm transition">
+                    + Input Barang Masuk
+                </a>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
             <table class="w-full text-left text-xs">
                 <thead>
                     <tr class="border-b border-slate-900/10 text-slate-500 font-bold uppercase tracking-wider">
-                        <th class="py-2.5 px-3">No. Bukti Masuk</th>
+                        <th class="py-2.5 px-3">Jenis Alur</th>
+                        <th class="py-2.5 px-3">No. Referensi</th>
                         <th class="py-2.5 px-3">Bahan Baku</th>
-                        <th class="py-2.5 px-3 text-right">Jumlah</th>
-                        <th class="py-2.5 px-3">Pemasok / Asal</th>
-                        <th class="py-2.5 px-3">Tanggal</th>
-                        <th class="py-2.5 px-3">Penerima</th>
+                        <th class="py-2.5 px-3 text-right">Kuantitas</th>
+                        <th class="py-2.5 px-3">Asal / Tujuan / Keterangan</th>
+                        <th class="py-2.5 px-3">Tanggal & Waktu</th>
+                        <th class="py-2.5 px-3">Petugas</th>
                         <th class="py-2.5 px-3">Catatan</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-900/5">
-                    @forelse ($recentReceipts as $rcv)
+                    @forelse ($recentLogs as $log)
                         <tr class="hover:bg-white/40 transition">
+                            <td class="py-2.5 px-3">
+                                @if($log->type === 'in')
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                        Barang Masuk
+                                    </span>
+                                @elseif($log->type === 'out')
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                                        Pemakaian Produksi
+                                    </span>
+                                @else
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-900 text-white shadow-sm">
+                                        Timbang Ulang
+                                    </span>
+                                @endif
+                            </td>
                             <td class="py-2.5 px-3 font-mono font-semibold text-slate-900">
-                                {{ $rcv->receipt_number }}
+                                {{ $log->reference_number ?? '-' }}
                             </td>
                             <td class="py-2.5 px-3 font-semibold text-slate-800">
-                                {{ $rcv->material->name ?? '-' }}
+                                {{ $log->material->name ?? '-' }}
                             </td>
-                            <td class="py-2.5 px-3 text-right font-mono font-bold text-emerald-700">
-                                +{{ number_format($rcv->quantity, 1) }} {{ $rcv->unit }}
+                            <td class="py-2.5 px-3 text-right font-mono font-bold">
+                                @if($log->type === 'in')
+                                    <span class="text-emerald-700">+{{ number_format($log->quantity, 1) }} {{ $log->unit }}</span>
+                                @elseif($log->type === 'out')
+                                    <span class="text-amber-800">-{{ number_format($log->quantity, 1) }} {{ $log->unit }}</span>
+                                @else
+                                    <span class="text-slate-900">{{ number_format($log->quantity, 1) }} {{ $log->unit }} <span class="font-sans text-[10px] font-normal text-slate-500">(Opname)</span></span>
+                                @endif
                             </td>
                             <td class="py-2.5 px-3 text-slate-700">
-                                {{ $rcv->source_or_supplier }}
+                                {{ $log->source_or_destination ?? '-' }}
                             </td>
-                            <td class="py-2.5 px-3 text-slate-600">
-                                {{ $rcv->received_date->format('d/m/Y') }}
+                            <td class="py-2.5 px-3 text-slate-600 font-mono text-[11px]">
+                                {{ $log->movement_date ? $log->movement_date->format('d/m/Y H:i') : '-' }} WIB
                             </td>
-                            <td class="py-2.5 px-3 text-slate-700">
-                                {{ $rcv->received_by }}
+                            <td class="py-2.5 px-3 text-slate-700 font-medium">
+                                {{ $log->actor_by ?? '-' }}
+                                @if($log->signature_path)
+                                    <div class="mt-1">
+                                        <img src="{{ asset('storage/' . $log->signature_path) }}" alt="Tanda Tangan" class="h-6 w-auto object-contain border border-slate-200 rounded p-0.5 bg-white">
+                                    </div>
+                                @endif
                             </td>
                             <td class="py-2.5 px-3 text-slate-500 text-[11px] max-w-xs truncate">
-                                {{ $rcv->notes ?? '-' }}
+                                {{ $log->notes ?? '-' }}
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-6 text-center text-slate-400">
-                                Belum ada riwayat barang masuk.
+                            <td colspan="8" class="py-6 text-center text-slate-400">
+                                Belum ada riwayat alur barang gudang.
                             </td>
                         </tr>
                     @endforelse
@@ -234,7 +308,12 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori</label>
-                    <input type="text" name="category" required placeholder="Kayu Dasar / Minyak..." class="w-full px-3 py-2 rounded-xl text-xs apple-input">
+                    <input type="text" name="category" list="categoriesDatalist" required placeholder="Kayu Dasar / Minyak..." class="w-full px-3 py-2 rounded-xl text-xs apple-input">
+                    <datalist id="categoriesDatalist">
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat }}">
+                        @endforeach
+                    </datalist>
                 </div>
             </div>
 
@@ -258,15 +337,9 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Estimasi Biaya / Unit (Rp)</label>
-                    <input type="number" step="100" name="unit_cost" value="0" class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Lokasi Rak Simpan</label>
-                    <input type="text" name="storage_location" placeholder="Rak A-01" class="w-full px-3 py-2 rounded-xl text-xs apple-input">
-                </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Estimasi Biaya / Unit (Rp)</label>
+                <input type="number" step="100" name="unit_cost" value="0" class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono">
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
@@ -281,12 +354,536 @@
     </div>
 </div>
 
+<!-- Modal Hitung Ulang Stok Opname -->
+<div id="recountMaterialModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div class="apple-glass-panel bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-900/10">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Timbang Ulang Stok (Stock Opname)</h3>
+                <p id="recountSubTitle" class="text-[11px] text-slate-600 font-mono mt-0.5"></p>
+            </div>
+            <button type="button" onclick="closeRecountModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">
+                ✕
+            </button>
+        </div>
+
+        <form id="recountForm" method="POST" class="mt-4 space-y-4">
+            @csrf
+            
+            <div class="p-3 rounded-2xl bg-slate-100 border border-slate-200 text-xs">
+                <span class="text-slate-600 block">Stok saat ini tercatat di sistem:</span>
+                <span id="currentStockDisplay" class="font-mono font-bold text-slate-900 text-sm"></span>
+            </div>
+
+            <div>
+                <label for="actual_stock" class="block text-xs font-semibold text-slate-800 mb-1">
+                    Hasil Timbang Ulang / Stok Fisik Aktif <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0" 
+                        id="actual_stock" 
+                        name="actual_stock" 
+                        required 
+                        class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono text-slate-900 border-slate-300 pr-16"
+                    >
+                    <span id="recountUnitBadge" class="absolute right-3 top-2 text-xs font-bold text-slate-800">
+                        kg
+                    </span>
+                </div>
+            </div>
+
+            <div>
+                <label for="weighed_by" class="block text-xs font-semibold text-slate-800 mb-1">
+                    Nama Penimbang <span class="text-red-500">*</span>
+                </label>
+                <input 
+                    type="text" 
+                    id="weighed_by" 
+                    name="weighed_by" 
+                    required 
+                    placeholder="Nama petugas / penimbang..."
+                    class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium"
+                >
+            </div>
+
+            <div>
+                <label for="recount_notes" class="block text-xs font-semibold text-slate-800 mb-1">
+                    Catatan Penimbangan / Stock Opname
+                </label>
+                <textarea 
+                    id="recount_notes" 
+                    name="notes" 
+                    rows="2" 
+                    class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
+                ></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
+                <button type="button" onclick="closeRecountModal()" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+                    Batal
+                </button>
+                <button type="submit" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm">
+                    Simpan Hasil Timbang
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Edit Data Bahan Baku -->
+<div id="editMaterialModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div class="apple-glass-panel bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-900/10">
+            <h3 class="text-sm font-bold text-slate-900">Edit Data Bahan Baku</h3>
+            <button type="button" onclick="closeEditModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">
+                ✕
+            </button>
+        </div>
+
+        <form id="editMaterialForm" method="POST" class="mt-4 space-y-3">
+            @csrf
+            @method('PUT')
+
+            <div>
+                <label for="edit_code" class="block text-xs font-semibold text-slate-800 mb-1">Kode Bahan Baku <span class="text-red-500">*</span></label>
+                <input type="text" id="edit_code" name="code" required class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-mono font-bold uppercase">
+            </div>
+
+            <div>
+                <label for="edit_name" class="block text-xs font-semibold text-slate-800 mb-1">Nama Bahan Baku <span class="text-red-500">*</span></label>
+                <input type="text" id="edit_name" name="name" required class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium">
+            </div>
+
+            <div>
+                <label for="edit_category" class="block text-xs font-semibold text-slate-800 mb-1">Kategori <span class="text-red-500">*</span></label>
+                <input type="text" id="edit_category" name="category" list="editCategoryDatalist" required class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium">
+                <datalist id="editCategoryDatalist">
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat }}">
+                    @endforeach
+                </datalist>
+            </div>
+
+            <div>
+                <label for="edit_minimum_stock" class="block text-xs font-semibold text-slate-800 mb-1">Minimal Alert Stok <span class="text-red-500">*</span></label>
+                <input type="number" step="0.01" min="0" id="edit_minimum_stock" name="minimum_stock" required class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-mono">
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
+                <button type="button" onclick="closeEditModal()" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+                    Batal
+                </button>
+                <button type="submit" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm">
+                    Simpan Perubahan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Sortir Bahan Baku -->
+<div id="sortMaterialModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div class="apple-glass-panel bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-900/10">
+            <div>
+                <h3 class="text-sm font-bold text-slate-900">Sortir Bahan Baku</h3>
+                <p id="sortSubTitle" class="text-[11px] text-slate-600 font-mono mt-0.5"></p>
+            </div>
+            <button type="button" onclick="closeSortModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">
+                ✕
+            </button>
+        </div>
+
+        <form id="sortMaterialForm" method="POST" class="mt-4 space-y-4">
+            @csrf
+
+            <div class="p-3 rounded-2xl bg-slate-100 border border-slate-200 text-xs">
+                <span class="text-slate-600 block">Stok awal bahan baku yang akan disortir:</span>
+                <span id="sortCurrentStockDisplay" class="font-mono font-bold text-slate-900 text-sm"></span>
+            </div>
+
+            <div>
+                <label for="sorted_quantity" class="block text-xs font-semibold text-slate-800 mb-1">
+                    Kuantitas Tersortir <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0.01" 
+                        id="sorted_quantity" 
+                        name="sorted_quantity" 
+                        required 
+                        class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono text-slate-900 border-slate-300 pr-16"
+                    >
+                    <span id="sortUnitBadge" class="absolute right-3 top-2 text-xs font-bold text-slate-800">
+                        kg
+                    </span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-800 mb-2">
+                    Tujuan Hasil Sortir <span class="text-red-500">*</span>
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-300 cursor-pointer bg-slate-50 hover:bg-slate-100 transition text-xs font-medium text-slate-800">
+                        <input type="radio" name="destination_type" value="new" checked onchange="toggleDestinationType('new')" class="text-slate-900 focus:ring-slate-900">
+                        <span>Jadikan Bahan Baru</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-300 cursor-pointer bg-slate-50 hover:bg-slate-100 transition text-xs font-medium text-slate-800">
+                        <input type="radio" name="destination_type" value="existing" onchange="toggleDestinationType('existing')" class="text-slate-900 focus:ring-slate-900">
+                        <span>Gabung Bahan Ada</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Options: Bahan Baku Baru -->
+            <div id="newMaterialSection" class="space-y-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                <div>
+                    <label for="sort_new_name" class="block text-xs font-semibold text-slate-800 mb-1">
+                        Nama Bahan Baku Baru <span class="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="sort_new_name" 
+                        name="new_name" 
+                        class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
+                    >
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="sort_new_code" class="block text-[11px] font-semibold text-slate-700 mb-1">Kode (Opsional)</label>
+                        <input type="text" id="sort_new_code" name="new_code" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input font-mono">
+                    </div>
+                    <div>
+                        <label for="sort_new_category" class="block text-[11px] font-semibold text-slate-700 mb-1">Kategori (Opsional)</label>
+                        <input type="text" id="sort_new_category" name="new_category" list="sortCategoriesDatalist" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input">
+                        <datalist id="sortCategoriesDatalist">
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat }}">
+                            @endforeach
+                        </datalist>
+                    </div>
+                </div>
+                <p class="text-[10px] text-slate-500 italic">
+                    Satuan bahan baru otomatis mengikuti satuan bahan asal: <strong id="sortNewMaterialUnitNotice">kg</strong>.
+                </p>
+            </div>
+
+            <!-- Options: Gabung ke Bahan Existing -->
+            <div id="existingMaterialSection" class="hidden space-y-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                <div>
+                    <label for="existing_material_id" class="block text-xs font-semibold text-slate-800 mb-1">
+                        Pilih Bahan Baku Tujuan <span class="text-red-500">*</span>
+                    </label>
+                    <select 
+                        id="existing_material_id" 
+                        name="existing_material_id" 
+                        onchange="validateUnitMatch()"
+                        class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
+                    >
+                        <option value="" data-unit="">-- Pilih Bahan Baku Tujuan --</option>
+                        @foreach($allMaterials as $m)
+                            <option value="{{ $m->id }}" data-unit="{{ strtolower($m->unit) }}">
+                                [{{ $m->code }}] {{ $m->name }} (Stok: {{ number_format($m->stock_quantity, 1) }} {{ $m->unit }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Unit mismatch alert -->
+                <div id="unitMismatchAlert" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+                    <p class="font-bold">Satuan tidak dapat digabungkan!</p>
+                    <p id="unitMismatchText" class="mt-0.5 text-[11px]"></p>
+                </div>
+            </div>
+
+            <div>
+                <label for="sort_actor_by" class="block text-xs font-semibold text-slate-800 mb-1">
+                    Nama Petugas / Penimbang <span class="text-red-500">*</span>
+                </label>
+                <input 
+                    type="text" 
+                    id="sort_actor_by" 
+                    name="actor_by" 
+                    required 
+                    class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium"
+                >
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between mb-1">
+                    <label class="block text-xs font-semibold text-slate-800">
+                        Tanda Tangan Petugas / Penimbang
+                    </label>
+                    <button type="button" onclick="clearSortSignature()" class="text-[10px] text-slate-500 hover:text-slate-800 underline">
+                        Bersihkan Tanda Tangan
+                    </button>
+                </div>
+                <div class="border border-slate-300 rounded-xl overflow-hidden bg-white">
+                    <canvas id="sortSignatureCanvas" width="350" height="110" class="w-full h-28 touch-none cursor-crosshair block bg-white"></canvas>
+                </div>
+                <input type="hidden" name="signature_data" id="sort_signature_data">
+            </div>
+
+            <div>
+                <label for="sort_notes" class="block text-xs font-semibold text-slate-800 mb-1">
+                    Catatan Sortir
+                </label>
+                <textarea 
+                    id="sort_notes" 
+                    name="notes" 
+                    rows="2" 
+                    class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
+                ></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
+                <button type="button" onclick="closeSortModal()" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+                    Batal
+                </button>
+                <button type="submit" id="submitSortBtn" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm">
+                    Proses Sortir
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+    let currentSortSourceMaterialId = null;
+    let currentSortSourceUnit = '';
+
     function openNewMaterialModal() {
         document.getElementById('newMaterialModal').classList.remove('hidden');
     }
     function closeNewMaterialModal() {
         document.getElementById('newMaterialModal').classList.add('hidden');
+    }
+
+    function openSortModal(id, code, name, stock, unit) {
+        currentSortSourceMaterialId = id;
+        currentSortSourceUnit = (unit || '').toLowerCase().trim();
+
+        const modal = document.getElementById('sortMaterialModal');
+        const form = document.getElementById('sortMaterialForm');
+        const title = document.getElementById('sortSubTitle');
+        const stockDisplay = document.getElementById('sortCurrentStockDisplay');
+        const qtyInput = document.getElementById('sorted_quantity');
+        const unitBadge = document.getElementById('sortUnitBadge');
+        const unitNotice = document.getElementById('sortNewMaterialUnitNotice');
+
+        form.action = `/production/materials/${id}/sort`;
+        title.innerText = `[${code}] ${name}`;
+        stockDisplay.innerText = `${stock} ${unit}`;
+        qtyInput.max = stock;
+        qtyInput.value = '';
+        unitBadge.innerText = unit;
+        unitNotice.innerText = unit;
+
+        const select = document.getElementById('existing_material_id');
+        Array.from(select.options).forEach(opt => {
+            if (opt.value == id) {
+                opt.disabled = true;
+                opt.style.display = 'none';
+            } else {
+                opt.disabled = false;
+                opt.style.display = '';
+            }
+        });
+        select.value = '';
+
+        document.querySelector('input[name="destination_type"][value="new"]').checked = true;
+        toggleDestinationType('new');
+
+        document.getElementById('sort_new_name').value = '';
+        document.getElementById('sort_new_code').value = '';
+        document.getElementById('sort_new_category').value = '';
+        document.getElementById('sort_notes').value = '';
+
+        clearSortSignature();
+        modal.classList.remove('hidden');
+        setTimeout(initSortSignatureCanvas, 100);
+    }
+
+    let sortCanvas, sortCtx;
+    let isDrawingSortSig = false;
+    let sortCanvasInitialized = false;
+
+    function initSortSignatureCanvas() {
+        sortCanvas = document.getElementById('sortSignatureCanvas');
+        if (!sortCanvas) return;
+        sortCtx = sortCanvas.getContext('2d');
+
+        sortCtx.strokeStyle = '#0f172a';
+        sortCtx.lineWidth = 2;
+        sortCtx.lineCap = 'round';
+        sortCtx.lineJoin = 'round';
+
+        function getPos(e) {
+            const rect = sortCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: (clientX - rect.left) * (sortCanvas.width / (rect.width || 1)),
+                y: (clientY - rect.top) * (sortCanvas.height / (rect.height || 1))
+            };
+        }
+
+        function startDraw(e) {
+            isDrawingSortSig = true;
+            const pos = getPos(e);
+            sortCtx.beginPath();
+            sortCtx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+            if (!isDrawingSortSig) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            sortCtx.lineTo(pos.x, pos.y);
+            sortCtx.stroke();
+            const input = document.getElementById('sort_signature_data');
+            if (input) input.value = sortCanvas.toDataURL('image/png');
+        }
+
+        function stopDraw() {
+            if (isDrawingSortSig) {
+                isDrawingSortSig = false;
+                const input = document.getElementById('sort_signature_data');
+                if (input) input.value = sortCanvas.toDataURL('image/png');
+            }
+        }
+
+        if (!sortCanvasInitialized) {
+            sortCanvas.addEventListener('mousedown', startDraw);
+            sortCanvas.addEventListener('mousemove', draw);
+            sortCanvas.addEventListener('mouseup', stopDraw);
+            sortCanvas.addEventListener('mouseleave', stopDraw);
+
+            sortCanvas.addEventListener('touchstart', startDraw, { passive: false });
+            sortCanvas.addEventListener('touchmove', draw, { passive: false });
+            sortCanvas.addEventListener('touchend', stopDraw);
+
+            sortCanvasInitialized = true;
+        }
+    }
+
+    function clearSortSignature() {
+        if (sortCanvas && sortCtx) {
+            sortCtx.clearRect(0, 0, sortCanvas.width, sortCanvas.height);
+        }
+        const input = document.getElementById('sort_signature_data');
+        if (input) input.value = '';
+    }
+
+    function closeSortModal() {
+        document.getElementById('sortMaterialModal').classList.add('hidden');
+    }
+
+    function toggleDestinationType(type) {
+        const newSec = document.getElementById('newMaterialSection');
+        const existSec = document.getElementById('existingMaterialSection');
+        const newNameInput = document.getElementById('sort_new_name');
+        const existSelect = document.getElementById('existing_material_id');
+
+        if (type === 'new') {
+            newSec.classList.remove('hidden');
+            existSec.classList.add('hidden');
+            newNameInput.required = true;
+            existSelect.required = false;
+            validateUnitMatch();
+        } else {
+            newSec.classList.add('hidden');
+            existSec.classList.remove('hidden');
+            newNameInput.required = false;
+            existSelect.required = true;
+            validateUnitMatch();
+        }
+    }
+
+    function validateUnitMatch() {
+        const destType = document.querySelector('input[name="destination_type"]:checked')?.value;
+        const alertDiv = document.getElementById('unitMismatchAlert');
+        const alertText = document.getElementById('unitMismatchText');
+        const submitBtn = document.getElementById('submitSortBtn');
+
+        if (destType !== 'existing') {
+            alertDiv.classList.add('hidden');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            return;
+        }
+
+        const select = document.getElementById('existing_material_id');
+        const selectedOpt = select.options[select.selectedIndex];
+
+        if (!selectedOpt || !selectedOpt.value) {
+            alertDiv.classList.add('hidden');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            return;
+        }
+
+        const targetUnit = (selectedOpt.dataset.unit || '').toLowerCase().trim();
+
+        if (targetUnit && targetUnit !== currentSortSourceUnit) {
+            alertText.innerText = `Satuan bahan baku asal (${currentSortSourceUnit}) tidak sama dengan bahan baku tujuan (${targetUnit}). Penggabungan tidak dapat dilakukan.`;
+            alertDiv.classList.remove('hidden');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            alertDiv.classList.add('hidden');
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    function openRecountModal(id, code, name, stock, unit, weighedBy = '') {
+        const modal = document.getElementById('recountMaterialModal');
+        const form = document.getElementById('recountForm');
+        const title = document.getElementById('recountSubTitle');
+        const currentStockDisplay = document.getElementById('currentStockDisplay');
+        const actualInput = document.getElementById('actual_stock');
+        const unitBadge = document.getElementById('recountUnitBadge');
+        const weighedByInput = document.getElementById('weighed_by');
+
+        form.action = `/production/materials/${id}/recount`;
+        title.innerText = `[${code}] ${name}`;
+        currentStockDisplay.innerText = `${stock} ${unit}`;
+        actualInput.value = stock;
+        unitBadge.innerText = unit;
+        if (weighedByInput) {
+            weighedByInput.value = weighedBy;
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeRecountModal() {
+        document.getElementById('recountMaterialModal').classList.add('hidden');
+    }
+
+    function openEditModal(id, code, name, category, minStock) {
+        const modal = document.getElementById('editMaterialModal');
+        const form = document.getElementById('editMaterialForm');
+        
+        form.action = `/production/materials/${id}`;
+        document.getElementById('edit_code').value = code;
+        document.getElementById('edit_name').value = name;
+        document.getElementById('edit_category').value = category;
+        document.getElementById('edit_minimum_stock').value = minStock;
+
+        modal.classList.remove('hidden');
+    }
+
+    function closeEditModal() {
+        document.getElementById('editMaterialModal').classList.add('hidden');
     }
 </script>
 @endsection

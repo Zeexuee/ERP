@@ -43,4 +43,41 @@ class ProductController extends Controller
 
         return redirect()->route('products.index')->with('success', 'Produk berhasil ditambahkan!');
     }
+
+    /**
+     * Perbarui data katalog produk dan stok fisik.
+     */
+    public function update(Request $request, Product $product)
+    {
+        $validated = $request->validate([
+            'sku' => ['required', 'string', 'max:50', 'unique:products,sku,'.$product->id],
+            'name' => ['required', 'string', 'max:255'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'unit' => ['required', 'string', 'max:50'],
+            'stock_quantity' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $product->update([
+            'sku' => strtoupper(trim($validated['sku'])),
+            'name' => trim($validated['name']),
+            'price' => (float) $validated['price'],
+            'unit' => strtolower(trim($validated['unit'])),
+            'stock_quantity' => (int) $validated['stock_quantity'],
+        ]);
+
+        $primaryBranch = $product->branches()->first();
+        if ($primaryBranch) {
+            $primaryBranch->update(['quantity' => (int) $validated['stock_quantity']]);
+        }
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Data katalog & stok produk [{$product->sku}] {$product->name} berhasil diperbarui.",
+                'product' => $product->fresh(['branches']),
+            ]);
+        }
+
+        return redirect()->route('products.index')->with('success', "Data katalog & stok produk [{$product->sku}] {$product->name} berhasil diperbarui.");
+    }
 }

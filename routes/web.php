@@ -53,7 +53,7 @@ Route::middleware('auth')->group(function () {
         Route::get('sales-orders/export/excel', [SalesOrderController::class, 'exportExcel'])->name('sales-orders.export.excel');
         Route::get('sales-orders/template/excel', [SalesOrderController::class, 'templateExcel'])->name('sales-orders.template.excel');
         Route::post('sales-orders/import/excel', [SalesOrderController::class, 'importExcel'])->name('sales-orders.import.excel');
-        Route::resource('sales-orders', SalesOrderController::class)->only(['index', 'create', 'store', 'show']);
+        Route::resource('sales-orders', SalesOrderController::class)->only(['index', 'create', 'store']);
         Route::patch('sales-orders/{salesOrder}/status', [SalesOrderController::class, 'updateStatus'])->name('sales-orders.update-status');
         Route::post('sales-orders/{salesOrder}/generate-invoice', [SalesOrderController::class, 'generateInvoice'])->name('sales-orders.generate-invoice');
 
@@ -65,9 +65,10 @@ Route::middleware('auth')->group(function () {
         Route::post('invoices/{invoice}/payments', [PaymentController::class, 'store'])->name('invoices.payments.store');
     });
 
-    // Katalog & Antrean Bersama (Katalog Produk & Permintaan Produksi)
-    Route::resource('products', ProductController::class)->only(['index', 'store']);
+    // Katalog, Permintaan Produksi & Detail Sales Order Acuan (Akses Bersama)
+    Route::resource('products', ProductController::class)->only(['index', 'store', 'update']);
     Route::resource('production-requests', ProductionRequestController::class)->only(['index', 'show']);
+    Route::get('sales-orders/{salesOrder}', [SalesOrderController::class, 'show'])->name('sales-orders.show');
 
     // Modul Produksi (Pabrik & Manufaktur)
     Route::middleware('role:production')->prefix('production')->name('production.')->group(function () {
@@ -76,7 +77,11 @@ Route::middleware('auth')->group(function () {
 
         // Barang Gudang (Bahan Baku & Inventaris)
         Route::get('materials', [MaterialController::class, 'index'])->name('materials.index');
+        Route::get('materials/export-logs', [MaterialController::class, 'exportLogs'])->name('materials.export-logs');
         Route::post('materials', [MaterialController::class, 'storeMaterial'])->name('materials.store');
+        Route::put('materials/{material}', [MaterialController::class, 'updateMaterial'])->name('materials.update');
+        Route::post('materials/{material}/recount', [MaterialController::class, 'recountMaterial'])->name('materials.recount');
+        Route::post('materials/{material}/sort', [MaterialController::class, 'sortMaterial'])->name('materials.sort');
         Route::get('materials/receipt/create', [MaterialController::class, 'createReceipt'])->name('materials.create-receipt');
         Route::post('materials/receipt', [MaterialController::class, 'storeReceipt'])->name('materials.store-receipt');
 

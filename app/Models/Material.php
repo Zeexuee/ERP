@@ -18,13 +18,15 @@ class Material extends Model
         'stock_quantity',
         'minimum_stock',
         'unit_cost',
-        'storage_location',
+        'last_weighed_at',
+        'last_weighed_by',
     ];
 
     protected $casts = [
         'stock_quantity' => 'decimal:2',
         'minimum_stock' => 'decimal:2',
         'unit_cost' => 'decimal:2',
+        'last_weighed_at' => 'datetime',
     ];
 
     public function receipts(): HasMany
@@ -35,6 +37,11 @@ class Material extends Model
     public function batchMaterials(): HasMany
     {
         return $this->hasMany(ProductionBatchMaterial::class);
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(MaterialLog::class);
     }
 
     public function isLowStock(): bool
