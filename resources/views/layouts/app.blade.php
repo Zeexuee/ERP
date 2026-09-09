@@ -11,6 +11,10 @@
     
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
+        html {
+            zoom: 0.9;
+        }
+
         body {
             font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #e2e8f0;
