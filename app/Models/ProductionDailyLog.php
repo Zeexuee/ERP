@@ -14,8 +14,11 @@ class ProductionDailyLog extends Model
         'production_batch_id',
         'log_date',
         'stage',
+        'process_step',
         'work_status',
         'progress_percentage',
+        'residual_resin_weight',
+        'weighed_result_weight',
         'pic_name',
         'attachment_path',
         'signature_path',
@@ -25,6 +28,8 @@ class ProductionDailyLog extends Model
     protected $casts = [
         'log_date' => 'date',
         'progress_percentage' => 'integer',
+        'residual_resin_weight' => 'decimal:2',
+        'weighed_result_weight' => 'decimal:2',
     ];
 
     public function batch(): BelongsTo

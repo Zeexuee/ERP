@@ -137,8 +137,8 @@
                 </div>
             </div>
 
-            <!-- Grid 3: Referensi Antrean Sales & PIC -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 relative z-40 overflow-visible">
+            <!-- Grid 3: Referensi Antrean Sales, Pilihan Proses Awal & PIC -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 relative z-40 overflow-visible">
                 <!-- 3. Referensi Antrean Sales (Searchable Solid Combobox) -->
                 <div class="relative overflow-visible z-50">
                     <label for="sales_request_display" class="block text-xs font-semibold text-slate-700 mb-1">
@@ -166,7 +166,28 @@
                     @enderror
                 </div>
 
-                <!-- 4. PIC (Bebas Input Default) -->
+                <!-- 4. Pilihan Proses Awal (Fleksibel Bebas Pilih) -->
+                <div class="relative z-10">
+                    <label for="initial_stage" class="block text-xs font-semibold text-slate-700 mb-1">
+                        Mulai dari Proses <span class="text-red-500">*</span>
+                    </label>
+                    <select 
+                        id="initial_stage" 
+                        name="initial_stage" 
+                        class="w-full px-3 py-2 rounded-xl text-xs apple-input bg-white text-slate-900 border-slate-300 font-semibold"
+                    >
+                        <option value="Tembak" {{ old('initial_stage') === 'Tembak' ? 'selected' : '' }}>Proses Tembak & Injeksi (Default)</option>
+                        <option value="Celup" {{ old('initial_stage') === 'Celup' ? 'selected' : '' }}>Proses Celup (Getah)</option>
+                        <option value="Cuci" {{ old('initial_stage') === 'Cuci' ? 'selected' : '' }}>Proses Cuci Kayu</option>
+                        <option value="Warna" {{ old('initial_stage') === 'Warna' ? 'selected' : '' }}>Proses Pewarnaan</option>
+                        <option value="Finishing (Molen)" {{ old('initial_stage') === 'Finishing (Molen)' ? 'selected' : '' }}>Proses Finishing — Mesin Molen</option>
+                        <option value="Finishing (Kerok)" {{ old('initial_stage') === 'Finishing (Kerok)' ? 'selected' : '' }}>Proses Finishing — Kerok Manual</option>
+                        <option value="Finishing (Bor / Vendor Pak Kholil)" {{ old('initial_stage') === 'Finishing (Bor / Vendor Pak Kholil)' ? 'selected' : '' }}>Proses Finishing — Bor (Vendor Pak Kholil)</option>
+                    </select>
+                    <span class="text-[10px] text-slate-500 mt-0.5 block">Produksi fleksibel, bisa mulai dari proses apa pun.</span>
+                </div>
+
+                <!-- 5. PIC (Bebas Input Default) -->
                 <div class="relative z-10">
                     <label for="pic_name" class="block text-xs font-semibold text-slate-700 mb-1">
                         PIC <span class="text-red-500">*</span>

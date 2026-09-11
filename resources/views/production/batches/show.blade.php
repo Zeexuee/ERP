@@ -84,6 +84,164 @@
         </div>
     </div>
 
+    <!-- 5 Proses Manufaktur Pabrik (Fleksibel & Terpisah) -->
+    @php
+        $pastStages = $batch->dailyLogs->pluck('stage')->toArray();
+        $pastStages[] = $batch->stage;
+
+        $hasTembak = collect($pastStages)->contains(fn($s) => str_contains($s, 'Tembak'));
+        $hasCelupCuci = collect($pastStages)->contains(fn($s) => str_contains($s, 'Celup') || str_contains($s, 'Cuci'));
+        $hasWarna = collect($pastStages)->contains(fn($s) => str_contains($s, 'Warna'));
+        $hasFinishing = collect($pastStages)->contains(fn($s) => str_contains($s, 'Finishing') || str_contains($s, 'Molen') || str_contains($s, 'Kerok') || str_contains($s, 'Bor'));
+        $hasSelesai = collect($pastStages)->contains(fn($s) => str_contains($s, 'Selesai'));
+
+        $isTembakActive = str_contains($batch->stage, 'Tembak');
+        $isCelupCuciActive = str_contains($batch->stage, 'Celup') || str_contains($batch->stage, 'Cuci');
+        $isWarnaActive = str_contains($batch->stage, 'Warna');
+        $isFinishingActive = str_contains($batch->stage, 'Finishing') || str_contains($batch->stage, 'Molen') || str_contains($batch->stage, 'Kerok') || str_contains($batch->stage, 'Bor');
+        $isSelesaiActive = str_contains($batch->stage, 'Selesai');
+    @endphp
+
+    <div class="apple-glass-panel rounded-3xl p-6 shadow-md space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/10 pb-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-bold text-slate-900">5 Proses Manufaktur Pabrik</span>
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-white">
+                        Fleksibel & Independen
+                    </span>
+                </div>
+                <span class="text-[11px] text-slate-500 block mt-0.5">
+                    Setiap proses dapat dipilih dan dijalankan secara bebas sesuai kebutuhan produk di lapangan.
+                </span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-mono font-semibold text-slate-600">
+                    Proses Aktif: <strong class="text-slate-900">{{ $batch->stage }}</strong>
+                </span>
+            </div>
+        </div>
+
+        <!-- 5 Cards Proses Manufaktur (Fleksibel Bebas Pilih) -->
+        <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <!-- Tembak -->
+            <div onclick="selectProcessStage('Tembak')" class="p-3 rounded-2xl border cursor-pointer hover:scale-[1.01] transition {{ $isTembakActive ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : ($hasTembak ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-white/60 text-slate-600 border-slate-200') }}">
+                <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1">
+                    <span>Proses Tembak</span>
+                    @if($isTembakActive)
+                        <span class="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-white text-slate-900">Aktif</span>
+                    @elseif($hasTembak)
+                        <span class="text-emerald-700 font-bold">✓ Tercatat</span>
+                    @endif
+                </div>
+                <div class="text-xs font-bold leading-tight">
+                    Injeksi & Jemur
+                </div>
+                <div class="text-[9px] mt-1 opacity-70">
+                    {{ $batch->wet_result_weight ? number_format($batch->wet_result_weight, 1) . ' kg basah' : 'Kayu + Getah' }}
+                </div>
+            </div>
+
+            <!-- Celup / Cuci -->
+            <div onclick="selectProcessStage('Celup')" class="p-3 rounded-2xl border cursor-pointer hover:scale-[1.01] transition {{ $isCelupCuciActive ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : ($hasCelupCuci ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-white/60 text-slate-600 border-slate-200') }}">
+                <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1">
+                    <span>Celup / Cuci</span>
+                    @if($isCelupCuciActive)
+                        <span class="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-white text-slate-900">Aktif</span>
+                    @elseif($hasCelupCuci)
+                        <span class="text-emerald-700 font-bold">✓ Tercatat</span>
+                    @endif
+                </div>
+                <div class="text-xs font-bold leading-tight">
+                    Perendaman / Cuci
+                </div>
+                <div class="text-[9px] mt-1 opacity-70">
+                    Bisa Celup, Cuci, atau keduanya
+                </div>
+            </div>
+
+            <!-- Warna -->
+            <div onclick="selectProcessStage('Warna')" class="p-3 rounded-2xl border cursor-pointer hover:scale-[1.01] transition {{ $isWarnaActive ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : ($hasWarna ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-white/60 text-slate-600 border-slate-200') }}">
+                <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1">
+                    <span>Pewarnaan</span>
+                    @if($isWarnaActive)
+                        <span class="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-white text-slate-900">Aktif</span>
+                    @elseif($hasWarna)
+                        <span class="text-emerald-700 font-bold">✓ Tercatat</span>
+                    @endif
+                </div>
+                <div class="text-xs font-bold leading-tight">
+                    Pewarnaan Kayu
+                </div>
+                <div class="text-[9px] mt-1 opacity-70">
+                    Formulasi pigmen / lewati
+                </div>
+            </div>
+
+            <!-- Finishing -->
+            <div onclick="selectProcessStage('Finishing (Molen)')" class="p-3 rounded-2xl border cursor-pointer hover:scale-[1.01] transition {{ $isFinishingActive ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : ($hasFinishing ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-white/60 text-slate-600 border-slate-200') }}">
+                <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1">
+                    <span>Finishing</span>
+                    @if($isFinishingActive)
+                        <span class="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-white text-slate-900">Aktif</span>
+                    @elseif($hasFinishing)
+                        <span class="text-emerald-700 font-bold">✓ Tercatat</span>
+                    @endif
+                </div>
+                <div class="text-xs font-bold leading-tight">
+                    Molen / Kerok / Bor
+                </div>
+                <div class="text-[9px] mt-1 opacity-70">
+                    Pabrik / Vendor Pak Kholil
+                </div>
+            </div>
+
+            <!-- Selesai -->
+            <div onclick="selectProcessStage('Selesai')" class="p-3 rounded-2xl border cursor-pointer hover:scale-[1.01] transition {{ $isSelesaiActive ? 'bg-slate-900 text-white border-slate-900 shadow-sm' : ($hasSelesai ? 'bg-emerald-50 text-emerald-900 border-emerald-200' : 'bg-white/60 text-slate-600 border-slate-200') }}">
+                <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider mb-1">
+                    <span>Selesai & QC</span>
+                    @if($isSelesaiActive || $batch->status === 'completed')
+                        <span class="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-white text-slate-900">Selesai</span>
+                    @endif
+                </div>
+                <div class="text-xs font-bold leading-tight">
+                    QC & Gudang Jadi
+                </div>
+                <div class="text-[9px] mt-1 opacity-70">
+                    Realisasi stok barang jadi
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Tembak & Vendor Overview Bar -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-slate-100 text-xs">
+            <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span class="text-[10px] text-slate-400 block font-semibold uppercase">Hasil Tembak Basah</span>
+                <span class="font-mono font-bold text-slate-800 text-sm">
+                    {{ $batch->wet_result_weight ? number_format($batch->wet_result_weight, 1) . ' kg' : '-' }}
+                </span>
+            </div>
+            <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span class="text-[10px] text-slate-400 block font-semibold uppercase">Getah Sisa Tembak</span>
+                <span class="font-mono font-bold text-slate-800 text-sm">
+                    {{ $batch->residual_resin_weight ? number_format($batch->residual_resin_weight, 1) . ' kg' : '-' }}
+                </span>
+            </div>
+            <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span class="text-[10px] text-slate-400 block font-semibold uppercase">Hasil Setelah Jemur</span>
+                <span class="font-mono font-bold text-slate-800 text-sm">
+                    {{ $batch->dried_result_weight ? number_format($batch->dried_result_weight, 1) . ' kg' : '-' }}
+                </span>
+            </div>
+            <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                <span class="text-[10px] text-slate-400 block font-semibold uppercase">Vendor Bor Pak Kholil</span>
+                <span class="font-bold text-slate-800 truncate block">
+                    {{ $batch->vendor_name ? $batch->vendor_name : '-' }}
+                </span>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <!-- Kolom Kiri: Alokasi Bahan Baku & Catatan Formula -->
@@ -141,7 +299,7 @@
             @if($batch->status === 'in_progress')
                 <div class="apple-glass-panel rounded-3xl p-6 shadow-md space-y-4">
                     <h3 class="text-sm font-bold text-slate-900 border-b border-slate-900/10 pb-2">
-                        Tambah Laporan Lanjutan Produksi
+                        Pencatatan Proses Produksi (Batch #{{ $batch->batch_number }})
                     </h3>
 
                     @error('materials')
@@ -160,14 +318,16 @@
                             </div>
 
                             <div>
-                                <label class="block text-xs font-semibold text-slate-700 mb-1">Tahap Pengerjaan <span class="text-red-500">*</span></label>
-                                <select name="stage" id="stageSelect" required class="w-full px-3 py-1.5 rounded-xl text-xs apple-input bg-white">
-                                    <option value="Sortir" {{ old('stage', $batch->stage) === 'Sortir' ? 'selected' : '' }}>Sortir</option>
-                                    <option value="Tembak" {{ old('stage', $batch->stage) === 'Tembak' ? 'selected' : '' }}>Tembak</option>
-                                    <option value="Jemur" {{ old('stage', $batch->stage) === 'Jemur' ? 'selected' : '' }}>Jemur</option>
-                                    <option value="Testing Bakar" {{ old('stage', $batch->stage) === 'Testing Bakar' ? 'selected' : '' }}>Testing Bakar</option>
-                                    <option value="Finishing" {{ old('stage', $batch->stage) === 'Finishing' ? 'selected' : '' }}>Finishing</option>
-                                    <option value="Selesai" {{ old('stage') === 'Selesai' ? 'selected' : '' }}>Selesai</option>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Pilih Proses Pengerjaan <span class="text-red-500">*</span></label>
+                                <select name="stage" id="stageSelect" required class="w-full px-3 py-1.5 rounded-xl text-xs apple-input bg-white font-semibold">
+                                    <option value="Tembak" {{ old('stage', $batch->stage) === 'Tembak' ? 'selected' : '' }}>Proses Tembak & Injeksi Getah</option>
+                                    <option value="Celup" {{ old('stage', $batch->stage) === 'Celup' ? 'selected' : '' }}>Proses Celup (Getah)</option>
+                                    <option value="Cuci" {{ old('stage', $batch->stage) === 'Cuci' ? 'selected' : '' }}>Proses Cuci Kayu</option>
+                                    <option value="Warna" {{ old('stage', $batch->stage) === 'Warna' ? 'selected' : '' }}>Proses Pewarnaan</option>
+                                    <option value="Finishing (Molen)" {{ old('stage', $batch->stage) === 'Finishing (Molen)' ? 'selected' : '' }}>Proses Finishing — Mesin Molen (Halus & Kilap)</option>
+                                    <option value="Finishing (Kerok)" {{ old('stage', $batch->stage) === 'Finishing (Kerok)' ? 'selected' : '' }}>Proses Finishing — Kerok Manual (Serat Alami)</option>
+                                    <option value="Finishing (Bor / Vendor Pak Kholil)" {{ old('stage', $batch->stage) === 'Finishing (Bor / Vendor Pak Kholil)' ? 'selected' : '' }}>Proses Finishing — Bor (Vendor Pak Kholil)</option>
+                                    <option value="Selesai" {{ old('stage') === 'Selesai' ? 'selected' : '' }}>Selesai & Lolos QC (Simpan ke Gudang Jadi)</option>
                                 </select>
                             </div>
 
@@ -181,12 +341,70 @@
                             </div>
                         </div>
 
-                        <!-- Dynamic BOM Material Allocation Container (Shown when stage === Tembak) -->
-                        <div id="bomAllocationContainer" class="hidden p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                        <!-- Metric Box Tahap Tembak & Penjemuran -->
+                        <div id="tembakMetricsBox" class="p-4 rounded-2xl bg-white/80 border border-slate-200/80 space-y-3">
+                            <h4 class="text-xs font-bold text-slate-900 border-b border-slate-100 pb-1.5">
+                                Catatan Hasil Tembak & Penjemuran
+                            </h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Hasil Tembak Basah (kg)</label>
+                                    <input type="number" step="0.01" name="wet_result_weight" value="{{ old('wet_result_weight', $batch->wet_result_weight) }}" placeholder="0.00" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input font-mono">
+                                    <span class="text-[9px] text-slate-400 mt-0.5 block">Timbangan basah setelah injeksi</span>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Getah Sisa Tembak (kg)</label>
+                                    <input type="number" step="0.01" name="residual_resin_weight" value="{{ old('residual_resin_weight', $batch->residual_resin_weight) }}" placeholder="0.00" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input font-mono">
+                                    <span class="text-[9px] text-slate-400 mt-0.5 block">Sisa getah dalam bejana</span>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Kembalikan Getah ke Gudang</label>
+                                    <select name="residual_resin_material_id" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input bg-white">
+                                        <option value="">-- Jangan Kembalikan --</option>
+                                        @foreach($materials->where('category', 'Minyak & Resin') as $rMat)
+                                            <option value="{{ $rMat->id }}">{{ $rMat->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    <span class="text-[9px] text-slate-400 mt-0.5 block">Menambah stok getah gudang</span>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Hasil Setelah Jemur (kg)</label>
+                                    <input type="number" step="0.01" name="weighed_result_weight" value="{{ old('weighed_result_weight', $batch->dried_result_weight) }}" placeholder="0.00" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input font-mono font-bold">
+                                    <span class="text-[9px] text-slate-400 mt-0.5 block">Timbangan kering setelah jemur</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Metric Box Vendor Bor Pak Kholil (Khusus Produk KLM) -->
+                        <div id="vendorMetricsBox" class="hidden p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-3">
+                            <div class="flex items-center justify-between border-b border-amber-200/70 pb-1.5">
+                                <h4 class="text-xs font-bold text-amber-950">
+                                    Pengiriman ke Vendor Finishing Bor (Pak Kholil)
+                                </h4>
+                                <span class="px-2 py-0.5 text-[10px] font-bold bg-amber-200 text-amber-900 rounded-lg">Pihak Ketiga</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Nama Vendor Pengerjaan</label>
+                                    <input type="text" name="vendor_name" value="{{ old('vendor_name', $batch->vendor_name ?? 'Pak Kholil') }}" placeholder="Pak Kholil" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input font-semibold">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Dikirim ke Vendor</label>
+                                    <input type="date" name="vendor_sent_date" value="{{ old('vendor_sent_date', $batch->vendor_sent_date?->format('Y-m-d') ?? date('Y-m-d')) }}" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input">
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal Diterima Kembali</label>
+                                    <input type="date" name="vendor_received_date" value="{{ old('vendor_received_date', $batch->vendor_received_date?->format('Y-m-d')) }}" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Dynamic BOM Material Allocation Container (Shown when stage === Tembak atau Celup) -->
+                        <div id="bomAllocationContainer" class="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
                             <div class="flex items-center justify-between border-b border-slate-200 pb-2">
                                 <div>
-                                    <h4 class="text-xs font-bold text-slate-900">Alokasi Komposisi Bahan Baku (Proses Tembak / Infusi)</h4>
-                                    <p class="text-[10px] text-slate-500 mt-0.5">Pilih bahan baku yang digunakan untuk proses tembak. Stok bahan di gudang akan otomatis dipotong dan dicatat ke Riwayat Alur Barang Gudang.</p>
+                                    <h4 class="text-xs font-bold text-slate-900">Alokasi Bahan Baku Tambahan (Jika Ada)</h4>
+                                    <p class="text-[10px] text-slate-500 mt-0.5">Misal pemakaian getah tambahan pada proses celup atau pewarna. Stok gudang akan otomatis dipotong.</p>
                                 </div>
                                 <button type="button" onclick="addMaterialRowLog()" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-xs transition">
                                     + Tambah Baris Bahan
@@ -210,7 +428,7 @@
                             </div>
                         </div>
 
-                        <!-- Dynamic Actual Qty Field when stage === Selesai or work_status === selesai -->
+                        <!-- Dynamic Actual Qty Field when stage === Selesai -->
                         <div id="actualQtyContainer" class="hidden p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-2">
                             <label class="block text-xs font-bold text-slate-900">Hasil Barang Jadi Aktual <span class="text-red-500">*</span></label>
                             <div class="relative max-w-xs">
@@ -222,7 +440,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                             <div>
                                 <label class="block text-xs font-semibold text-slate-700 mb-1">Petugas Pelapor (PIC) <span class="text-red-500">*</span></label>
-                                <input type="text" name="pic_name" value="{{ old('pic_name') }}" required placeholder="Masukkan nama PIC..." class="w-full px-3 py-1.5 rounded-xl text-xs apple-input">
+                                <input type="text" name="pic_name" value="{{ old('pic_name', auth()->user()->name ?? '') }}" required placeholder="Masukkan nama PIC..." class="w-full px-3 py-1.5 rounded-xl text-xs apple-input">
                             </div>
 
                             <div class="sm:col-span-2">
@@ -339,7 +557,14 @@
                                         <div>
                                             <span class="text-[10px] font-semibold text-slate-400 block mb-1">Tanda Tangan PIC:</span>
                                             <div class="p-1 bg-white border border-slate-200 rounded-xl shadow-xs inline-block">
-                                                <img src="{{ asset('storage/' . $log->signature_path) }}" alt="Tanda Tangan PIC" class="h-10 w-auto object-contain">
+                                                @php
+                                                    $sigSrc = \Illuminate\Support\Str::startsWith($log->signature_path, ['data:image', 'http://', 'https://']) 
+                                                        ? $log->signature_path 
+                                                        : (\Illuminate\Support\Str::startsWith($log->signature_path, 'storage/') 
+                                                            ? asset($log->signature_path) 
+                                                            : asset('storage/' . $log->signature_path));
+                                                @endphp
+                                                <img src="{{ $sigSrc }}" alt="Tanda Tangan PIC" class="h-10 w-auto object-contain" onerror="this.onerror=null; this.parentElement.innerHTML='<span class=\'text-[10px] text-slate-400 italic px-2\'>Berkas belum terunggah di server</span>';">
                                             </div>
                                         </div>
                                     @endif
@@ -497,10 +722,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const actualQtyContainer = document.getElementById('actualQtyContainer');
     const workStatusContainer = document.getElementById('workStatusContainer');
     const bomAllocationContainer = document.getElementById('bomAllocationContainer');
+    const tembakMetricsBox = document.getElementById('tembakMetricsBox');
+    const jemurMetricsBox = document.getElementById('jemurMetricsBox');
+    const vendorMetricsBox = document.getElementById('vendorMetricsBox');
 
     function checkStageState() {
         const stageVal = stageSelect ? stageSelect.value : '';
 
+        // Actual quantity container (saat selesai)
         if (stageVal === 'Selesai') {
             actualQtyContainer?.classList.remove('hidden');
             workStatusContainer?.classList.add('hidden');
@@ -509,13 +738,34 @@ document.addEventListener('DOMContentLoaded', function() {
             workStatusContainer?.classList.remove('hidden');
         }
 
+        // Tembak Metrics
         if (stageVal === 'Tembak') {
+            tembakMetricsBox?.classList.remove('hidden');
             bomAllocationContainer?.classList.remove('hidden');
             if (document.querySelectorAll('#materialRowsContainerLog tr').length === 0) {
                 addMaterialRowLog();
             }
         } else {
-            bomAllocationContainer?.classList.add('hidden');
+            tembakMetricsBox?.classList.add('hidden');
+        }
+
+        // Jemur Metrics
+        if (stageVal.includes('Jemur')) {
+            jemurMetricsBox?.classList.remove('hidden');
+        } else {
+            jemurMetricsBox?.classList.add('hidden');
+        }
+
+        // Vendor Bor Pak Kholil Metrics
+        if (stageVal.includes('Bor') || stageVal.includes('Pak Kholil')) {
+            vendorMetricsBox?.classList.remove('hidden');
+        } else {
+            vendorMetricsBox?.classList.add('hidden');
+        }
+
+        // Celup BOM allocation
+        if (stageVal.includes('Celup')) {
+            bomAllocationContainer?.classList.remove('hidden');
         }
     }
 
@@ -523,6 +773,25 @@ document.addEventListener('DOMContentLoaded', function() {
     if (workStatusSelect) workStatusSelect.addEventListener('change', checkStageState);
     checkStageState(); // Initial check on load
 });
+
+function selectProcessStage(stage) {
+    const stageSelect = document.getElementById('stageSelect');
+    if (!stageSelect) return;
+
+    for (let i = 0; i < stageSelect.options.length; i++) {
+        const optVal = stageSelect.options[i].value;
+        if (optVal === stage || optVal.includes(stage) || stage.includes(optVal)) {
+            stageSelect.selectedIndex = i;
+            stageSelect.dispatchEvent(new Event('change'));
+            break;
+        }
+    }
+
+    const formSection = document.querySelector('form[action*="store-log"]');
+    if (formSection) {
+        formSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
 
 let fileGroupCounter = 0;
 

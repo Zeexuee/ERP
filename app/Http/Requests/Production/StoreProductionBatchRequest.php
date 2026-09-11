@@ -18,13 +18,15 @@ class StoreProductionBatchRequest extends FormRequest
             'product_id' => ['required', 'exists:products,id'],
             'production_request_id' => ['nullable', 'exists:production_requests,id'],
             'target_quantity' => ['required', 'numeric', 'min:0.01'],
+            'initial_stage' => ['nullable', 'string', 'max:100'],
+            'finishing_type' => ['nullable', 'string', 'in:molen,kerok,bor_vendor'],
             'start_date' => ['required', 'date'],
             'target_completion_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'pic_name' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
-            'materials' => ['required', 'array', 'min:1'],
-            'materials.*.material_id' => ['required', 'exists:materials,id'],
-            'materials.*.quantity_used' => ['required', 'numeric', 'min:0.01'],
+            'materials' => ['nullable', 'array'],
+            'materials.*.material_id' => ['required_with:materials', 'exists:materials,id'],
+            'materials.*.quantity_used' => ['required_with:materials', 'numeric', 'min:0.01'],
         ];
     }
 

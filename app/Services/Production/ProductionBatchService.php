@@ -23,12 +23,17 @@ class ProductionBatchService
      */
     public function createBatch(array $validatedData): ProductionBatch
     {
-        // 1. Verifikasi ketersediaan stok setiap bahan baku
-        foreach ($validatedData['materials'] as $item) {
-            $material = Material::find($item['material_id']);
-            if (! $material || $material->stock_quantity < $item['quantity_used']) {
-                $available = $material ? "{$material->stock_quantity} {$material->unit}" : '0';
-                throw new InvalidArgumentException("Stok bahan '{$material?->name}' tidak mencukupi. Tersedia: {$available}, diminta: {$item['quantity_used']} {$material?->unit}.");
+        // 1. Verifikasi ketersediaan stok setiap bahan baku jika dialokasikan
+        if (! empty($validatedData['materials'])) {
+            foreach ($validatedData['materials'] as $item) {
+                if (empty($item['material_id'])) {
+                    continue;
+                }
+                $material = Material::find($item['material_id']);
+                if (! $material || $material->stock_quantity < $item['quantity_used']) {
+                    $available = $material ? "{$material->stock_quantity} {$material->unit}" : '0';
+                    throw new InvalidArgumentException("Stok bahan '{$material?->name}' tidak mencukupi. Tersedia: {$available}, diminta: {$item['quantity_used']} {$material?->unit}.");
+                }
             }
         }
 
@@ -48,6 +53,12 @@ class ProductionBatchService
                 }
             }
 
+            $initialStage = ! empty($validatedData['initial_stage']) ? $validatedData['initial_stage'] : 'Tembak';
+            $finishingType = $validatedData['finishing_type'] ?? 'molen';
+            if (str_contains(strtolower($product->name), 'klm') || str_contains(strtolower($product->sku ?? ''), 'klm')) {
+                $finishingType = 'bor_vendor';
+            }
+
             $batch = ProductionBatch::create([
                 'batch_number' => $batchNumber,
                 'product_id' => $product->id,
@@ -56,48 +67,55 @@ class ProductionBatchService
                 'actual_quantity' => null,
                 'unit' => $product->unit ?? 'kg',
                 'status' => 'in_progress',
-                'stage' => 'Sortir',
+                'stage' => $initialStage,
+                'finishing_type' => $finishingType,
                 'start_date' => $validatedData['start_date'],
                 'target_completion_date' => $validatedData['target_completion_date'] ?? null,
                 'pic_name' => $validatedData['pic_name'],
                 'notes' => $validatedData['notes'] ?? null,
             ]);
 
-            // Alokasikan bahan baku & potong stok bahan baku di gudang
-            foreach ($validatedData['materials'] as $matItem) {
-                $mat = Material::findOrFail($matItem['material_id']);
+            // Alokasikan bahan baku & potong stok bahan baku di gudang jika ada
+            if (! empty($validatedData['materials'])) {
+                foreach ($validatedData['materials'] as $matItem) {
+                    if (empty($matItem['material_id']) || empty($matItem['quantity_used'])) {
+                        continue;
+                    }
+                    $mat = Material::findOrFail($matItem['material_id']);
 
-                ProductionBatchMaterial::create([
-                    'production_batch_id' => $batch->id,
-                    'material_id' => $mat->id,
-                    'quantity_used' => $matItem['quantity_used'],
-                    'unit' => $mat->unit,
-                ]);
+                    ProductionBatchMaterial::create([
+                        'production_batch_id' => $batch->id,
+                        'material_id' => $mat->id,
+                        'quantity_used' => $matItem['quantity_used'],
+                        'unit' => $mat->unit,
+                    ]);
 
-                $mat->decrement('stock_quantity', $matItem['quantity_used']);
+                    $mat->decrement('stock_quantity', $matItem['quantity_used']);
 
-                // Catat pemakaian bahan baku ke alur barang gudang (MaterialLog)
-                MaterialLog::create([
-                    'material_id' => $mat->id,
-                    'type' => 'out',
-                    'reference_number' => $batch->batch_number,
-                    'quantity' => $matItem['quantity_used'],
-                    'unit' => $mat->unit,
-                    'actor_by' => $batch->pic_name,
-                    'source_or_destination' => "Batch #{$batch->batch_number} ({$product->name})",
-                    'movement_date' => $batch->start_date,
-                    'notes' => "Alokasi pemakaian bahan baku untuk proses produksi batch #{$batch->batch_number}.",
-                ]);
+                    // Catat pemakaian bahan baku ke alur barang gudang (MaterialLog)
+                    MaterialLog::create([
+                        'material_id' => $mat->id,
+                        'type' => 'out',
+                        'reference_number' => $batch->batch_number,
+                        'quantity' => $matItem['quantity_used'],
+                        'unit' => $mat->unit,
+                        'actor_by' => $batch->pic_name,
+                        'source_or_destination' => "Batch #{$batch->batch_number} ({$product->name}) - Tahap {$initialStage}",
+                        'movement_date' => $batch->start_date,
+                        'notes' => "Alokasi pemakaian bahan baku untuk proses produksi batch #{$batch->batch_number}.",
+                    ]);
+                }
             }
 
-            // Catat log harian awal pengerjaan
+            // Catat log harian awal pengerjaan (Sesuai proses awal yang dipilih)
             ProductionDailyLog::create([
                 'production_batch_id' => $batch->id,
                 'log_date' => $validatedData['start_date'],
-                'stage' => 'Sortir',
+                'stage' => $initialStage,
+                'process_step' => strtolower(str_replace(' ', '_', $initialStage)),
                 'work_status' => 'selesai',
                 'pic_name' => $validatedData['pic_name'],
-                'notes' => "Proses produksi batch #{$batch->batch_number} resmi dimulai. Penimbangan dan alokasi bahan baku selesai dipersiapkan.",
+                'notes' => "Proses produksi batch #{$batch->batch_number} resmi dimulai pada proses {$initialStage}.",
             ]);
 
             // Jika terhubung ke antrean Sales, ubah status antrean menjadi In Production
@@ -113,7 +131,7 @@ class ProductionBatchService
     }
 
     /**
-     * Catat laporan harian proses produksi (Daily Log).
+     * Catat laporan harian proses produksi (Daily Log) dan alur pipeline manufaktur.
      */
     public function storeDailyLog(ProductionBatch $batch, array $validatedData, array|UploadedFile|null $attachments = null): ProductionDailyLog
     {
@@ -159,16 +177,61 @@ class ProductionBatchService
                 'production_batch_id' => $batch->id,
                 'log_date' => $validatedData['log_date'],
                 'stage' => $validatedData['stage'],
+                'process_step' => $validatedData['process_step'] ?? null,
                 'work_status' => $workStatus,
+                'residual_resin_weight' => $validatedData['residual_resin_weight'] ?? null,
+                'weighed_result_weight' => $validatedData['weighed_result_weight'] ?? null,
                 'pic_name' => $validatedData['pic_name'],
                 'notes' => $validatedData['notes'] ?? null,
                 'attachment_path' => $attachmentData,
                 'signature_path' => $signaturePath,
             ]);
 
-            $batch->update([
+            // Perbarui data pipeline pada batch
+            $batchUpdates = [
                 'stage' => $validatedData['stage'],
-            ]);
+            ];
+
+            if (! empty($validatedData['wet_result_weight'])) {
+                $batchUpdates['wet_result_weight'] = (float) $validatedData['wet_result_weight'];
+            }
+            if (! empty($validatedData['residual_resin_weight'])) {
+                $batchUpdates['residual_resin_weight'] = (float) $validatedData['residual_resin_weight'];
+
+                // Jika ada getah sisa hasil tembak dan dikembalikan ke stok gudang
+                if (! empty($validatedData['residual_resin_material_id'])) {
+                    $resinMat = Material::find($validatedData['residual_resin_material_id']);
+                    if ($resinMat) {
+                        $resinMat->increment('stock_quantity', (float) $validatedData['residual_resin_weight']);
+                        MaterialLog::create([
+                            'material_id' => $resinMat->id,
+                            'type' => 'in',
+                            'reference_number' => $batch->batch_number,
+                            'quantity' => (float) $validatedData['residual_resin_weight'],
+                            'unit' => $resinMat->unit,
+                            'actor_by' => $validatedData['pic_name'],
+                            'source_or_destination' => "Getah Sisa Hasil Tembak Batch #{$batch->batch_number}",
+                            'movement_date' => $validatedData['log_date'],
+                            'notes' => "Pengembalian getah sisa hasil tembak batch #{$batch->batch_number} ke stok gudang.",
+                            'signature_path' => $signaturePath,
+                        ]);
+                    }
+                }
+            }
+            if (! empty($validatedData['weighed_result_weight'])) {
+                $batchUpdates['dried_result_weight'] = (float) $validatedData['weighed_result_weight'];
+            }
+            if (! empty($validatedData['vendor_name'])) {
+                $batchUpdates['vendor_name'] = $validatedData['vendor_name'];
+            }
+            if (! empty($validatedData['vendor_sent_date'])) {
+                $batchUpdates['vendor_sent_date'] = $validatedData['vendor_sent_date'];
+            }
+            if (! empty($validatedData['vendor_received_date'])) {
+                $batchUpdates['vendor_received_date'] = $validatedData['vendor_received_date'];
+            }
+
+            $batch->update($batchUpdates);
 
             // Alokasi tambahan bahan baku (misal pada tahap Tembak / Infusi)
             if (! empty($validatedData['materials'])) {

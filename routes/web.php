@@ -9,6 +9,7 @@ use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Production\MaterialController;
+use App\Http\Controllers\Production\MaterialSortController;
 use App\Http\Controllers\Production\ProductionBatchController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\ProductionRequestController;
@@ -90,6 +91,12 @@ Route::middleware('auth')->group(function () {
         Route::post('materials/{material}/sort', [MaterialController::class, 'sortMaterial'])->name('materials.sort');
         Route::get('materials/receipt/create', [MaterialController::class, 'createReceipt'])->name('materials.create-receipt');
         Route::post('materials/receipt', [MaterialController::class, 'storeReceipt'])->name('materials.store-receipt');
+
+        // Proses Sortir Kayu Mandiri (Bahan Mentah -> Jemur -> Sortir -> Bahan Tembak Gudang)
+        Route::get('sorts', [MaterialSortController::class, 'index'])->name('sorts.index');
+        Route::get('sorts/create', [MaterialSortController::class, 'create'])->name('sorts.create');
+        Route::post('sorts', [MaterialSortController::class, 'store'])->name('sorts.store');
+        Route::get('sorts/{sortBatch}', [MaterialSortController::class, 'show'])->name('sorts.show')->whereNumber('sortBatch');
 
         // Proses Produksi (Manufaktur & Laporan Harian)
         Route::get('batches', [ProductionBatchController::class, 'index'])->name('batches.index');
