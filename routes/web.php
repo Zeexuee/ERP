@@ -76,9 +76,6 @@ Route::middleware('auth')->group(function () {
     Route::resource('production-requests', ProductionRequestController::class)->only(['index', 'show']);
     Route::get('sales-orders/{salesOrder}', [SalesOrderController::class, 'show'])->name('sales-orders.show');
 
-    // Detail Batch Produksi (Dapat diakses oleh Divisi Produksi dan Sales)
-    Route::middleware('role:production,sales')->get('production/batches/{batch}', [ProductionBatchController::class, 'show'])->name('production.batches.show');
-
     // Modul Produksi (Pabrik & Manufaktur)
     Route::middleware('role:production')->prefix('production')->name('production.')->group(function () {
         Route::get('/', [ProductionController::class, 'dashboard'])->name('dashboard');
@@ -102,6 +99,12 @@ Route::middleware('auth')->group(function () {
         Route::post('batches/{batch}/daily-logs', [ProductionBatchController::class, 'storeDailyLog'])->name('batches.store-log');
         Route::post('batches/{batch}/complete', [ProductionBatchController::class, 'complete'])->name('batches.complete');
     });
+
+    // Detail Batch Produksi (Dapat diakses oleh Divisi Produksi dan Sales)
+    Route::middleware('role:production,sales')
+        ->get('production/batches/{batch}', [ProductionBatchController::class, 'show'])
+        ->whereNumber('batch')
+        ->name('production.batches.show');
 
     // Modul STIN (Divisi Khusus)
     Route::middleware('role:stin')->prefix('stin')->name('stin.')->group(function () {

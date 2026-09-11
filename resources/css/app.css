@@ -8,6 +8,7 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
-html {
+body {
     zoom: 0.9;
 }
+
