@@ -6,6 +6,7 @@ use App\Enums\ProductionRequestStatus;
 use App\Enums\UserRole;
 use App\Models\Customer;
 use App\Models\Material;
+use App\Models\MaterialLog;
 use App\Models\Product;
 use App\Models\ProductionBatch;
 use App\Models\ProductionRequest;
@@ -351,5 +352,96 @@ class ProductionWorkflowTest extends TestCase
         $this->assertNotNull($log);
         $this->assertEquals('selesai', $log->work_status);
         $this->assertCount(2, $log->attachment_paths);
+    }
+
+    public function test_production_user_can_add_existing_material_to_batch_bom(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::PRODUCTION]);
+        $product = Product::create([
+            'sku' => 'GHR-BOM-001',
+            'name' => 'Gaharu Test BOM',
+            'price' => 1000000.00,
+            'stock_quantity' => 10,
+            'unit' => 'kg',
+        ]);
+
+        $batch = ProductionBatch::create([
+            'batch_number' => 'BATCH-TEST-BOM-01',
+            'product_id' => $product->id,
+            'target_quantity' => 5.00,
+            'unit' => 'kg',
+            'status' => 'in_progress',
+            'stage' => 'Sortir',
+            'start_date' => '2026-09-01',
+            'pic_name' => 'Mandor Pabrik',
+        ]);
+
+        $material = Material::create([
+            'code' => 'MAT-BOM-01',
+            'name' => 'Bahan Ekstra Uji',
+            'category' => 'Bahan Baku',
+            'unit' => 'kg',
+            'stock_quantity' => 20.00,
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->post(route('production.batches.add-material', $batch), [
+            'material_id' => $material->id,
+            'quantity_used' => 5.00,
+        ]);
+
+        $response->assertSessionHas('success');
+
+        $this->assertDatabaseHas('production_batch_materials', [
+            'production_batch_id' => $batch->id,
+            'material_id' => $material->id,
+            'quantity_used' => 5.00,
+        ]);
+
+        $material->refresh();
+        $this->assertEquals(15.00, (float) $material->stock_quantity);
+
+        $this->assertDatabaseHas('material_logs', [
+            'material_id' => $material->id,
+            'type' => 'out',
+            'quantity' => 5.00,
+        ]);
+    }
+
+    public function test_production_dashboard_displays_warehouse_materials_information(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::PRODUCTION]);
+
+        $material = Material::create([
+            'code' => 'MAT-DASH-01',
+            'name' => 'Kayu Gaharu Super A',
+            'category' => 'Bahan Baku',
+            'unit' => 'kg',
+            'stock_quantity' => 5.00,
+            'minimum_stock' => 10.00,
+        ]);
+
+        MaterialLog::create([
+            'material_id' => $material->id,
+            'type' => 'in',
+            'reference_number' => 'RCV-DASH-001',
+            'quantity' => 10.00,
+            'unit' => 'kg',
+            'movement_date' => now(),
+            'notes' => 'Penerimaan bahan baku gudang awal',
+        ]);
+
+        $this->actingAs($user);
+
+        $response = $this->get(route('production.dashboard'));
+
+        $response->assertStatus(200);
+        $response->assertSee('Informasi Barang Gudang (Bahan Baku)');
+        $response->assertSee('MAT-DASH-01');
+        $response->assertSee('Kayu Gaharu Super A');
+        $response->assertSee('Menipis');
+        $response->assertSee('Total Bahan Gudang');
+        $response->assertSee('Bahan Stok Menipis');
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
 use Illuminate\View\View;
 
 class CrmController extends Controller
@@ -12,13 +11,10 @@ class CrmController extends Controller
      */
     public function dashboard(): View
     {
-        $customers = Customer::withCount('salesOrders')->latest()->paginate(10);
-        $totalCustomers = Customer::count();
-        $activeCustomers = Customer::where('is_active', true)->count();
-        $topSpenders = Customer::with(['salesOrders'])->get()->sortByDesc(function ($c) {
-            return $c->salesOrders->sum('total_amount');
-        })->take(5);
-
-        return view('crm.dashboard', compact('customers', 'totalCustomers', 'activeCustomers', 'topSpenders'));
+        return view('under-development', [
+            'module_name' => 'CRM',
+            'division_label' => 'Manajemen Hubungan Pelanggan (CRM)',
+            'description' => 'Akses modul Manajemen CRM saat ini ditutup sementara karena fitur sedang dalam tahap pengembangan & integrasi sistem.',
+        ]);
     }
 }

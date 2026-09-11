@@ -65,10 +65,19 @@ Route::middleware('auth')->group(function () {
         Route::post('invoices/{invoice}/payments', [PaymentController::class, 'store'])->name('invoices.payments.store');
     });
 
-    // Katalog, Permintaan Produksi & Detail Sales Order Acuan (Akses Bersama)
-    Route::resource('products', ProductController::class)->only(['index', 'store', 'update']);
+    // Katalog Produk & Stok (Sales hanya lihat; Produksi & Super Admin dapat mengedit)
+    Route::get('products', [ProductController::class, 'index'])->name('products.index');
+    Route::middleware('role:production')->group(function () {
+        Route::post('products', [ProductController::class, 'store'])->name('products.store');
+        Route::match(['put', 'patch'], 'products/{product}', [ProductController::class, 'update'])->name('products.update');
+    });
+
+    // Permintaan Produksi (Antrean Sales) & Detail Sales Order Acuan
     Route::resource('production-requests', ProductionRequestController::class)->only(['index', 'show']);
     Route::get('sales-orders/{salesOrder}', [SalesOrderController::class, 'show'])->name('sales-orders.show');
+
+    // Detail Batch Produksi (Dapat diakses oleh Divisi Produksi dan Sales)
+    Route::middleware('role:production,sales')->get('production/batches/{batch}', [ProductionBatchController::class, 'show'])->name('production.batches.show');
 
     // Modul Produksi (Pabrik & Manufaktur)
     Route::middleware('role:production')->prefix('production')->name('production.')->group(function () {
@@ -89,7 +98,7 @@ Route::middleware('auth')->group(function () {
         Route::get('batches', [ProductionBatchController::class, 'index'])->name('batches.index');
         Route::get('batches/create', [ProductionBatchController::class, 'create'])->name('batches.create');
         Route::post('batches', [ProductionBatchController::class, 'store'])->name('batches.store');
-        Route::get('batches/{batch}', [ProductionBatchController::class, 'show'])->name('batches.show');
+        Route::post('batches/{batch}/materials', [ProductionBatchController::class, 'addMaterial'])->name('batches.add-material');
         Route::post('batches/{batch}/daily-logs', [ProductionBatchController::class, 'storeDailyLog'])->name('batches.store-log');
         Route::post('batches/{batch}/complete', [ProductionBatchController::class, 'complete'])->name('batches.complete');
     });

@@ -507,28 +507,31 @@
                             [
                                 'key' => 'stin',
                                 'label' => 'STIN',
-                                'fullName' => 'STIN',
+                                'fullName' => 'STIN (Tahap Pengembangan)',
                                 'url' => route('stin.dashboard'),
                                 'active' => request()->routeIs('stin.*'),
                                 'hasAccess' => $u ? $u->canAccessModule('stin') : false,
+                                'underDevelopment' => true,
                                 'icon' => 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
                             ],
                             [
                                 'key' => 'crm',
                                 'label' => 'CRM',
-                                'fullName' => 'CRM',
+                                'fullName' => 'CRM (Tahap Pengembangan)',
                                 'url' => route('crm.dashboard'),
                                 'active' => request()->routeIs('crm.*'),
                                 'hasAccess' => $u ? $u->canAccessModule('crm') : false,
+                                'underDevelopment' => true,
                                 'icon' => 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
                             ],
                             [
                                 'key' => 'ecommerce',
                                 'label' => 'E-Com',
-                                'fullName' => 'E-Commerce',
+                                'fullName' => 'E-Commerce (Tahap Pengembangan)',
                                 'url' => route('ecommerce.dashboard'),
                                 'active' => request()->routeIs('ecommerce.*'),
                                 'hasAccess' => $u ? $u->canAccessModule('ecommerce') : false,
+                                'underDevelopment' => true,
                                 'icon' => 'M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z',
                             ],
                         ];
@@ -538,9 +541,12 @@
                         <button 
                             type="button" 
                             onclick="handleModuleSwitch('{{ $m['key'] }}', '{{ $m['fullName'] }}', '{{ $m['url'] }}', {{ $m['hasAccess'] ? 'true' : 'false' }})"
-                            class="h-16 flex flex-col items-center justify-center p-2 rounded-2xl transition {{ $m['active'] ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-50 hover:bg-white text-slate-800 border border-slate-200/80' }}"
+                            class="relative h-16 flex flex-col items-center justify-center p-2 rounded-2xl transition {{ $m['active'] ? 'bg-slate-900 text-white shadow-sm' : 'bg-slate-50 hover:bg-white text-slate-800 border border-slate-200/80' }}"
                             title="{{ $m['fullName'] }}"
                         >
+                            @if(!empty($m['underDevelopment']))
+                                <span class="absolute top-1 right-1 px-1 py-0.2 rounded text-[7px] font-extrabold uppercase bg-amber-100 text-amber-900 border border-amber-300">Dev</span>
+                            @endif
                             <svg class="w-5 h-5 mb-1 {{ $m['active'] ? 'text-white' : 'text-slate-800' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $m['icon'] }}"/>
                             </svg>
@@ -701,24 +707,10 @@
             document.getElementById('switch_target_module').value = moduleKey;
             document.getElementById('switchModalTitle').textContent = 'Otorisasi ' + moduleName;
             
-            // Suggest default demo email for convenience
-            const demoEmails = {
-                'sales': 'sales@erp.com',
-                'production': 'produksi@erp.com',
-                'stin': 'stin@erp.com',
-                'crm': 'crm@erp.com',
-                'ecommerce': 'ecommerce@erp.com'
-            };
-
             const emailInput = document.getElementById('switch_email');
             const passInput = document.getElementById('switch_password');
-            if (demoEmails[moduleKey]) {
-                emailInput.value = demoEmails[moduleKey];
-                passInput.value = 'password';
-            } else {
-                emailInput.value = '';
-                passInput.value = '';
-            }
+            emailInput.value = '';
+            passInput.value = '';
 
             const errorBox = document.getElementById('switchModalError');
             errorBox.classList.add('hidden');

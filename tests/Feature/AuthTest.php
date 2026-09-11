@@ -20,8 +20,10 @@ class AuthTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertSee('Login');
-        $response->assertSee('sales@erp.com');
-        $response->assertSee('produksi@erp.com');
+        $response->assertSee('Email');
+        $response->assertSee('Password');
+        $response->assertSee('Masuk');
+        $response->assertDontSee('Akun:');
     }
 
     public function test_sales_user_can_login_and_redirects_to_sales_dashboard(): void

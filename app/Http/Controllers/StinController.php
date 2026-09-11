@@ -2,10 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Customer;
-use App\Models\Product;
-use App\Models\ProductionRequest;
-use App\Models\SalesOrder;
 use Illuminate\View\View;
 
 class StinController extends Controller
@@ -15,15 +11,10 @@ class StinController extends Controller
      */
     public function dashboard(): View
     {
-        $metrics = [
-            'total_customers' => Customer::count(),
-            'total_sales_orders' => SalesOrder::count(),
-            'total_production_requests' => ProductionRequest::count(),
-            'total_products' => Product::count(),
-        ];
-
-        $recentAudits = SalesOrder::with(['customer', 'items.product'])->latest()->take(5)->get();
-
-        return view('stin.dashboard', compact('metrics', 'recentAudits'));
+        return view('under-development', [
+            'module_name' => 'STIN',
+            'division_label' => 'Divisi Khusus STIN',
+            'description' => 'Akses modul Divisi STIN saat ini ditutup sementara karena fitur sedang dalam tahap pengembangan & integrasi sistem.',
+        ]);
     }
 }

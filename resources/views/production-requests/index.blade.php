@@ -5,11 +5,19 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
             <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Daftar Permintaan Produksi</h2>
-            <p class="text-xs text-slate-500 font-medium mt-1">Status pemicu produksi dari Sales Order. Akses Read-Only.</p>
+            <p class="text-xs text-slate-500 font-medium mt-1">Status antrean pemicu produksi dari Sales Order.</p>
         </div>
-        <span class="px-4 py-1.5 rounded-full text-xs font-bold badge-dark self-start">
-            Read-Only Access (Sales Scope)
-        </span>
+        <div>
+            @if(auth()->user()?->hasRole('sales'))
+                <a href="{{ url('/production/batches/1') }}" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm transition inline-block">
+                    + Tambah Antrean
+                </a>
+            @else
+                <span class="px-4 py-1.5 rounded-full text-xs font-bold badge-dark inline-block">
+                    Mode Lihat Saja
+                </span>
+            @endif
+        </div>
     </div>
 
     <div class="apple-glass-card rounded-2xl overflow-hidden">

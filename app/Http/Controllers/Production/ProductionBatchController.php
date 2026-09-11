@@ -107,9 +107,19 @@ class ProductionBatchController extends Controller
     /**
      * Tampilkan detail proses produksi, alokasi bahan, dan riwayat laporan harian.
      */
-    public function show(ProductionBatch $batch): View
+    public function show($batch): View|RedirectResponse
     {
-        $batch->load([
+        $batchModel = $batch instanceof ProductionBatch ? $batch : ProductionBatch::find($batch);
+
+        if (! $batchModel) {
+            $fallback = ProductionBatch::first();
+            if ($fallback) {
+                return redirect()->route('production.batches.show', $fallback);
+            }
+            abort(404, 'Data proses produksi tidak ditemukan.');
+        }
+
+        $batchModel->load([
             'product.branches',
             'productionRequest.salesOrder.customer',
             'batchMaterials.material',
@@ -119,7 +129,11 @@ class ProductionBatchController extends Controller
         $branches = ProductBranch::select('branch_name', 'branch_code')->distinct()->get();
         $materials = Material::orderBy('category')->orderBy('name')->get();
 
-        return view('production.batches.show', compact('batch', 'branches', 'materials'));
+        return view('production.batches.show', [
+            'batch' => $batchModel,
+            'branches' => $branches,
+            'materials' => $materials,
+        ]);
     }
 
     /**
@@ -224,6 +238,32 @@ class ProductionBatchController extends Controller
             DB::rollBack();
 
             return back()->with('error', 'Gagal menyelesaikan produksi: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Tambah alokasi bahan baku ke komposisi BOM batch produksi.
+     */
+    public function addMaterial(Request $request, ProductionBatch $batch, ProductionBatchService $batchService): RedirectResponse
+    {
+        $validated = $request->validate([
+            'material_id' => ['required', 'exists:materials,id'],
+            'quantity_used' => ['required', 'numeric', 'min:0.01'],
+        ], [
+            'material_id.required' => 'Silakan pilih bahan baku dari gudang terlebih dahulu.',
+            'material_id.exists' => 'Bahan baku yang dipilih tidak ditemukan di data gudang.',
+            'quantity_used.required' => 'Kuantitas bahan yang dialokasikan wajib diisi.',
+            'quantity_used.min' => 'Kuantitas bahan minimal 0.01.',
+        ]);
+
+        try {
+            $batchService->addMaterialToBatch($batch, $validated);
+
+            return back()->with('success', 'Bahan baku berhasil ditambahkan ke komposisi BOM batch ini.');
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menambahkan bahan ke BOM: '.$e->getMessage());
         }
     }
 }

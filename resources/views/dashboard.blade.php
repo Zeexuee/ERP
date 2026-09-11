@@ -127,7 +127,12 @@
                 <h3 class="text-base font-bold text-slate-900">Status Permintaan Produksi</h3>
                 <p class="text-xs text-slate-500 font-medium mt-0.5">Pantau antrean dan detail produk yang sedang diproduksi.</p>
             </div>
-            <a href="{{ route('production-requests.index') }}" class="text-xs font-bold text-slate-600 hover:text-slate-900">Lihat Semua →</a>
+            <div class="flex items-center gap-2">
+                <a href="{{ url('/production/batches/1') }}" class="px-3 py-1.5 rounded-xl btn-dark text-xs font-semibold shadow-xs">
+                    + Tambah Antrean
+                </a>
+                <a href="{{ route('production-requests.index') }}" class="text-xs font-bold text-slate-600 hover:text-slate-900">Lihat Semua →</a>
+            </div>
         </div>
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm text-slate-800">

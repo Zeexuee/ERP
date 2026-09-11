@@ -79,19 +79,6 @@
         .btn-dark:hover {
             background: #1e293b;
         }
-
-        .role-chip {
-            background: rgba(255, 255, 255, 0.65);
-            border: 1px solid rgba(15, 23, 42, 0.1);
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-
-        .role-chip:hover {
-            background: #0f172a;
-            color: #ffffff;
-            border-color: #0f172a;
-        }
     </style>
 </head>
 <body class="min-h-full flex items-center justify-center p-4 relative overflow-y-auto">
@@ -170,54 +157,8 @@
                 </button>
             </form>
 
-            <div class="mt-6 pt-4 border-t border-slate-900/10">
-                <div class="text-[10px] uppercase font-bold text-slate-400 mb-2">
-                    Akun:
-                </div>
-
-                <div class="grid grid-cols-2 gap-1.5">
-                    <button type="button" onclick="fillCredentials('sales@erp.com', 'password')" class="role-chip p-2 rounded-xl text-left">
-                        <span class="block text-[11px] font-bold">Sales</span>
-                        <span class="block text-[9px] opacity-70">sales@erp.com</span>
-                    </button>
-
-                    <button type="button" onclick="fillCredentials('produksi@erp.com', 'password')" class="role-chip p-2 rounded-xl text-left">
-                        <span class="block text-[11px] font-bold">Produksi</span>
-                        <span class="block text-[9px] opacity-70">produksi@erp.com</span>
-                    </button>
-
-                    <button type="button" onclick="fillCredentials('stin@erp.com', 'password')" class="role-chip p-2 rounded-xl text-left">
-                        <span class="block text-[11px] font-bold">STIN</span>
-                        <span class="block text-[9px] opacity-70">stin@erp.com</span>
-                    </button>
-
-                    <button type="button" onclick="fillCredentials('crm@erp.com', 'password')" class="role-chip p-2 rounded-xl text-left">
-                        <span class="block text-[11px] font-bold">CRM</span>
-                        <span class="block text-[9px] opacity-70">crm@erp.com</span>
-                    </button>
-
-                    <button type="button" onclick="fillCredentials('ecommerce@erp.com', 'password')" class="role-chip p-2 rounded-xl text-left">
-                        <span class="block text-[11px] font-bold">E-Commerce</span>
-                        <span class="block text-[9px] opacity-70">ecommerce@erp.com</span>
-                    </button>
-
-                    <button type="button" onclick="fillCredentials('superadmin@erp.com', 'password')" class="role-chip p-2 rounded-xl text-left">
-                        <span class="block text-[11px] font-bold">Super Role</span>
-                        <span class="block text-[9px] opacity-70">superadmin@erp.com</span>
-                    </button>
-                </div>
-            </div>
-
         </div>
 
     </div>
-
-    <script>
-        function fillCredentials(email, pass) {
-            document.getElementById('email').value = email;
-            document.getElementById('password').value = pass;
-            document.getElementById('email').focus();
-        }
-    </script>
 </body>
 </html>

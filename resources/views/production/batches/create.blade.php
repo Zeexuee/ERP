@@ -331,8 +331,22 @@
     }
 
     function selectNewProduct(name) {
-        alert('Untuk menambah Produk Jadi baru, Anda dapat mendaftarkannya terlebih dahulu pada Master Produk atau menghubungi Admin.');
         document.getElementById('productSuggestions').classList.add('hidden');
+        openProductNoticeModal();
+    }
+
+    function openProductNoticeModal() {
+        const modal = document.getElementById('productNoticeModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+        }
+    }
+
+    function closeProductNoticeModal() {
+        const modal = document.getElementById('productNoticeModal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
     }
 
     // --- Searchable Combobox logic untuk Referensi Antrean Sales ---
@@ -589,3 +603,44 @@
     });
 </script>
 @endsection
+
+@push('modals')
+<!-- Modal Informasi Tambah Barang Jadi -->
+<div id="productNoticeModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div class="apple-glass-panel bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+        
+        <div class="flex items-center justify-between pb-3 border-b border-slate-900/10">
+            <h3 class="text-sm font-bold text-slate-900">Informasi Barang Jadi</h3>
+            <button type="button" onclick="closeProductNoticeModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">
+                ✕
+            </button>
+        </div>
+
+        <div class="py-4 space-y-2">
+            <p class="text-sm font-bold text-slate-900 leading-relaxed">
+                Tambahkan dulu data barang jadi di bagian halaman barang jadi
+            </p>
+            <p class="text-xs text-slate-600 leading-relaxed">
+                Produk hasil jadi harus terdaftar terlebih dahulu pada master katalog Barang Jadi sebelum batch produksi dapat dibuat.
+            </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
+            <button 
+                type="button" 
+                onclick="closeProductNoticeModal()" 
+                class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+            >
+                Oke
+            </button>
+            <a 
+                href="{{ route('products.index') }}" 
+                class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm inline-block"
+            >
+                Arahan ke Data Barang Jadi
+            </a>
+        </div>
+
+    </div>
+</div>
+@endpush

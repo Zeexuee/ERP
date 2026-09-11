@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ProductionRequestStatus;
+use App\Models\Material;
+use App\Models\MaterialLog;
 use App\Models\Product;
 use App\Models\ProductBranch;
 use App\Models\ProductionRequest;
@@ -29,13 +31,28 @@ class ProductionController extends Controller
         $products = Product::with('branches')->latest()->take(10)->get();
         $branches = ProductBranch::select('branch_code')->distinct()->get();
 
+        $totalMaterials = Material::count();
+        $lowStockMaterialsCount = Material::whereColumn('stock_quantity', '<=', 'minimum_stock')->count();
+        $warehouseMaterials = Material::orderByRaw('stock_quantity <= minimum_stock DESC')
+            ->orderBy('name')
+            ->take(8)
+            ->get();
+        $recentMaterialLogs = MaterialLog::with('material')
+            ->latest('id')
+            ->take(5)
+            ->get();
+
         return view('production.dashboard', compact(
             'requests',
             'totalPending',
             'totalInProduction',
             'totalFinished',
             'products',
-            'branches'
+            'branches',
+            'totalMaterials',
+            'lowStockMaterialsCount',
+            'warehouseMaterials',
+            'recentMaterialLogs'
         ));
     }
 

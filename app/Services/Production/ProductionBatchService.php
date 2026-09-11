@@ -309,4 +309,53 @@ class ProductionBatchService
             return $batch->refresh();
         });
     }
+
+    /**
+     * Tambahkan bahan baku langsung ke komposisi BOM pada batch produksi.
+     */
+    public function addMaterialToBatch(ProductionBatch $batch, array $data): ProductionBatchMaterial
+    {
+        return DB::transaction(function () use ($batch, $data) {
+            $material = Material::findOrFail($data['material_id']);
+            $qty = (float) $data['quantity_used'];
+            $unit = $material->unit;
+
+            if ($material->stock_quantity < $qty) {
+                throw new InvalidArgumentException("Stok bahan baku '{$material->name}' tidak mencukupi. Tersedia: {$material->stock_quantity} {$material->unit}, diminta: {$qty} {$material->unit}.");
+            }
+
+            $material->decrement('stock_quantity', $qty);
+
+            // Cek apakah material sudah ada dalam batch ini
+            $batchMaterial = ProductionBatchMaterial::where('production_batch_id', $batch->id)
+                ->where('material_id', $material->id)
+                ->first();
+
+            if ($batchMaterial) {
+                $batchMaterial->increment('quantity_used', $qty);
+            } else {
+                $batchMaterial = ProductionBatchMaterial::create([
+                    'production_batch_id' => $batch->id,
+                    'material_id' => $material->id,
+                    'quantity_used' => $qty,
+                    'unit' => $unit,
+                ]);
+            }
+
+            // Catat log pemakaian bahan ke Riwayat Alur Barang Gudang (MaterialLog)
+            MaterialLog::create([
+                'material_id' => $material->id,
+                'type' => 'out',
+                'reference_number' => $batch->batch_number,
+                'quantity' => $qty,
+                'unit' => $unit,
+                'actor_by' => auth()->user()?->name ?? $batch->pic_name,
+                'source_or_destination' => "Batch #{$batch->batch_number} ({$batch->product?->name})",
+                'movement_date' => now()->toDateString(),
+                'notes' => "Alokasi penambahan bahan baku langsung ke komposisi BOM batch #{$batch->batch_number}.",
+            ]);
+
+            return $batchMaterial;
+        });
+    }
 }

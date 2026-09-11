@@ -8,9 +8,15 @@
             <p class="text-xs text-slate-500 font-medium mt-1">Manajemen katalog barang jadi, harga satuan, dan pemutakhiran stok fisik produk.</p>
         </div>
         <div class="flex items-center gap-2">
-            <button type="button" onclick="openCreateProductModal()" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm flex items-center gap-1.5 transition">
-                <span>+ Tambah Jenis Produk</span>
-            </button>
+            @if(auth()->user()?->hasRole('production'))
+                <button type="button" onclick="openCreateProductModal()" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm flex items-center gap-1.5 transition">
+                    <span>+ Tambah Jenis Produk</span>
+                </button>
+            @else
+                <span class="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    Mode Katalog (Lihat Saja)
+                </span>
+            @endif
         </div>
     </div>
 
@@ -25,7 +31,9 @@
                         <th class="px-6 py-4">Harga Satuan</th>
                         <th class="px-6 py-4">Total Stok</th>
                         <th class="px-6 py-4">Status Stok</th>
-                        <th class="px-6 py-4 text-center">Aksi</th>
+                        @if(auth()->user()?->hasRole('production'))
+                            <th class="px-6 py-4 text-center">Aksi</th>
+                        @endif
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-900/10">
@@ -59,21 +67,23 @@
                                     <span class="px-3 py-1 rounded-full text-xs font-bold badge-dark opacity-50">Stok Habis</span>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 text-center">
-                                <button 
-                                    type="button" 
-                                    onclick="openEditProductModal({{ $p->id }}, '{{ addslashes($p->sku) }}', '{{ addslashes($p->name) }}', {{ (float)$p->price }}, '{{ addslashes($p->unit ?? 'kg') }}', {{ (float)$totalStock }})"
-                                    title="Edit Katalog Produk & Stok"
-                                    class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 shadow-sm transition"
-                                >
-                                    Edit Produk & Stok
-                                </button>
-                            </td>
+                            @if(auth()->user()?->hasRole('production'))
+                                <td class="px-6 py-4 text-center">
+                                    <button 
+                                        type="button" 
+                                        onclick="openEditProductModal({{ $p->id }}, '{{ addslashes($p->sku) }}', '{{ addslashes($p->name) }}', {{ (float)$p->price }}, '{{ addslashes($p->unit ?? 'kg') }}', {{ (float)$totalStock }})"
+                                        title="Edit Katalog Produk & Stok"
+                                        class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 shadow-sm transition"
+                                    >
+                                        Edit Produk & Stok
+                                    </button>
+                                </td>
+                            @endif
                         </tr>
 
                         <!-- Expandable Branch Breakdown & Production Notes Row -->
                         <tr id="branch-row-{{ $p->id }}" class="hidden bg-slate-900/[0.02] border-b border-slate-900/10">
-                            <td colspan="7" class="px-6 py-5">
+                            <td colspan="{{ auth()->user()?->hasRole('production') ? 7 : 6 }}" class="px-6 py-5">
                                 <div class="space-y-4">
                                     <div class="flex items-center justify-between border-b border-slate-900/10 pb-2">
                                         <div>
@@ -128,6 +138,7 @@
     </div>
 </div>
 
+@if(auth()->user()?->hasRole('production'))
 <!-- Modal Tambah Produk Baru -->
 <div id="createProductModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
     <div class="apple-glass-panel bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
@@ -233,6 +244,7 @@
         </form>
     </div>
 </div>
+@endif
 
 <script>
     function toggleProductBranchRow(productId) {

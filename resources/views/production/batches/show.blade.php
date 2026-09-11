@@ -90,9 +90,14 @@
         <div class="space-y-6 lg:col-span-1">
             <!-- Komposisi Bahan Baku (BOM) -->
             <div class="apple-glass-panel rounded-3xl p-6 shadow-md space-y-3">
-                <h3 class="text-sm font-bold text-slate-900 border-b border-slate-900/10 pb-2">
-                    Komposisi Bahan Baku (BOM)
-                </h3>
+                <div class="flex items-center justify-between border-b border-slate-900/10 pb-2">
+                    <h3 class="text-sm font-bold text-slate-900">
+                        Komposisi Bahan Baku (BOM)
+                    </h3>
+                    <button type="button" onclick="openAddMaterialModal()" class="px-3 py-1 rounded-xl btn-dark text-xs font-semibold shadow-xs">
+                        + Tambah Bahan
+                    </button>
+                </div>
 
                 <div class="divide-y divide-slate-900/5">
                     @forelse($batch->batchMaterials as $bm)
@@ -584,5 +589,117 @@ function renderDynamicFilesPreview() {
         });
     });
 }
+
+function openAddMaterialModal() {
+    const modal = document.getElementById('addMaterialModal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeAddMaterialModal() {
+    const modal = document.getElementById('addMaterialModal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function onBomSelectMaterial(select) {
+    const opt = select.options[select.selectedIndex];
+    const unit = opt ? opt.getAttribute('data-unit') : 'kg';
+    const stock = opt ? opt.getAttribute('data-stock') : null;
+    const unitBadge = document.getElementById('bom_unit_badge');
+    const stockInfo = document.getElementById('bom_stock_info');
+
+    unitBadge.innerText = unit || 'kg';
+
+    if (stock !== null && select.value !== '') {
+        stockInfo.innerText = `Sisa stok tersedia di gudang: ${parseFloat(stock).toFixed(2)} ${unit}`;
+    } else {
+        stockInfo.innerText = '';
+    }
+}
 </script>
 @endsection
+
+@push('modals')
+<!-- Modal Tambah Bahan ke Komposisi BOM -->
+<div id="addMaterialModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+    <div class="apple-glass-panel bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-900/10">
+            <h3 class="text-sm font-bold text-slate-900">Tambah Bahan Baku ke BOM</h3>
+            <button type="button" onclick="closeAddMaterialModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">
+                ✕
+            </button>
+        </div>
+
+        <form action="{{ route('production.batches.add-material', $batch) }}" method="POST" class="mt-4 space-y-4">
+            @csrf
+
+            <!-- Pilih Bahan Baku Gudang -->
+            <div>
+                <label for="bom_material_id" class="block text-xs font-semibold text-slate-800 mb-1">
+                    Pilih Bahan Baku <span class="text-red-500">*</span>
+                </label>
+                <select 
+                    name="material_id" 
+                    id="bom_material_id" 
+                    required
+                    onchange="onBomSelectMaterial(this)"
+                    class="w-full px-3 py-2 rounded-xl text-xs apple-input bg-white text-slate-900 border-slate-300 font-medium"
+                >
+                    <option value="">-- Pilih Bahan Baku dari Gudang --</option>
+                    @foreach($materials as $mat)
+                        <option 
+                            value="{{ $mat->id }}" 
+                            data-unit="{{ $mat->unit }}" 
+                            data-stock="{{ $mat->stock_quantity }}"
+                            data-name="{{ $mat->name }}"
+                        >
+                            {{ $mat->name }} ({{ $mat->code }}) — Stok: {{ number_format($mat->stock_quantity, 1) }} {{ $mat->unit }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Kuantitas Alokasi Pemakaian -->
+            <div>
+                <label for="bom_quantity_used" class="block text-xs font-semibold text-slate-800 mb-1">
+                    Kuantitas Dialokasikan <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                    <input 
+                        type="number" 
+                        step="0.01" 
+                        min="0.01" 
+                        name="quantity_used" 
+                        id="bom_quantity_used" 
+                        required 
+                        placeholder="0.00"
+                        class="w-full pl-3 pr-16 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-mono font-bold"
+                    >
+                    <span 
+                        id="bom_unit_badge" 
+                        class="absolute right-2.5 top-1/2 -translate-y-1/2 px-2 py-0.5 rounded-lg bg-slate-100 text-slate-700 text-[11px] font-bold"
+                    >
+                        kg
+                    </span>
+                </div>
+                <p id="bom_stock_info" class="text-[10px] text-slate-500 mt-1 font-medium"></p>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
+                <button 
+                    type="button" 
+                    onclick="closeAddMaterialModal()" 
+                    class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition"
+                >
+                    Batal
+                </button>
+                <button 
+                    type="submit" 
+                    class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm"
+                >
+                    Tambahkan ke BOM
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+@endpush
