@@ -13,6 +13,7 @@ use App\Models\MaterialLog;
 use App\Models\MaterialReceipt;
 use App\Services\ExcelImportExportService;
 use App\Services\Production\MaterialService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -97,9 +98,17 @@ class MaterialController extends Controller
     /**
      * Tambah jenis barang / bahan baku baru ke katalog gudang.
      */
-    public function storeMaterial(StoreMaterialRequest $request, MaterialService $materialService): RedirectResponse
+    public function storeMaterial(StoreMaterialRequest $request, MaterialService $materialService): RedirectResponse|JsonResponse
     {
         $material = $materialService->storeMaterial($request->validated());
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Bahan baku [{$material->code}] {$material->name} berhasil ditambahkan ke daftar barang gudang.",
+                'material' => $material,
+            ], 201);
+        }
 
         return back()->with('success', "Bahan baku [{$material->code}] {$material->name} berhasil ditambahkan ke daftar barang gudang.");
     }
@@ -134,7 +143,7 @@ class MaterialController extends Controller
     }
 
     /**
-     * Prosedur sortir bahan baku (menjadi bahan baku baru atau digabung ke bahan baku existing).
+     * Prosedur split bahan baku (menjadi bahan baku baru atau digabung ke bahan baku existing).
      */
     public function sortMaterial(SortMaterialRequest $request, Material $material, MaterialService $materialService): RedirectResponse
     {
@@ -143,7 +152,7 @@ class MaterialController extends Controller
             $target = $result['target'];
             $qty = $result['sorted_quantity'];
 
-            return back()->with('success', "Proses sortir bahan baku [{$material->code}] {$material->name} sebanyak {$qty} {$material->unit} berhasil. Dialokasikan ke [{$target->code}] {$target->name}.");
+            return back()->with('success', "Proses split bahan baku [{$material->code}] {$material->name} sebanyak {$qty} {$material->unit} berhasil. Dialokasikan ke [{$target->code}] {$target->name}.");
         } catch (\InvalidArgumentException $e) {
             return back()->withErrors(['sorted_quantity' => $e->getMessage()])->withInput();
         }

@@ -13,14 +13,18 @@ class MaterialSortBatch extends Model
 
     protected $fillable = [
         'sort_code',
+        'status',
         'source_material_id',
         'initial_weight',
         'dried_weight',
         'drying_loss_weight',
         'sort_date',
+        'report_date',
         'pic_name',
+        'report_pic_name',
         'notes',
         'signature_path',
+        'report_signature_path',
     ];
 
     protected $casts = [
@@ -28,7 +32,18 @@ class MaterialSortBatch extends Model
         'dried_weight' => 'decimal:2',
         'drying_loss_weight' => 'decimal:2',
         'sort_date' => 'date',
+        'report_date' => 'date',
     ];
+
+    public function isCompleted(): bool
+    {
+        return $this->status === 'completed';
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return $this->isCompleted() ? 'Selesai' : 'Sedang Disortir';
+    }
 
     public function sourceMaterial(): BelongsTo
     {

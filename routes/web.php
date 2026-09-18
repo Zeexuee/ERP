@@ -11,6 +11,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Production\MaterialController;
 use App\Http\Controllers\Production\MaterialSortController;
 use App\Http\Controllers\Production\ProductionBatchController;
+use App\Http\Controllers\Production\ProductionTembakController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\ProductionRequestController;
 use App\Http\Controllers\SalesOrderController;
@@ -89,6 +90,7 @@ Route::middleware('auth')->group(function () {
         Route::put('materials/{material}', [MaterialController::class, 'updateMaterial'])->name('materials.update');
         Route::post('materials/{material}/recount', [MaterialController::class, 'recountMaterial'])->name('materials.recount');
         Route::post('materials/{material}/sort', [MaterialController::class, 'sortMaterial'])->name('materials.sort');
+        Route::post('materials/{material}/split', [MaterialController::class, 'sortMaterial'])->name('materials.split');
         Route::get('materials/receipt/create', [MaterialController::class, 'createReceipt'])->name('materials.create-receipt');
         Route::post('materials/receipt', [MaterialController::class, 'storeReceipt'])->name('materials.store-receipt');
 
@@ -97,6 +99,14 @@ Route::middleware('auth')->group(function () {
         Route::get('sorts/create', [MaterialSortController::class, 'create'])->name('sorts.create');
         Route::post('sorts', [MaterialSortController::class, 'store'])->name('sorts.store');
         Route::get('sorts/{sortBatch}', [MaterialSortController::class, 'show'])->name('sorts.show')->whereNumber('sortBatch');
+        Route::post('sorts/{sortBatch}/report', [MaterialSortController::class, 'storeReport'])->name('sorts.store-report')->whereNumber('sortBatch');
+
+        // Proses Tembak Kayu (Bahan Kayu + Resin -> Injeksi/Tembak -> Hasil Basah -> Sisa Resin Kembali -> Hasil Kering)
+        Route::get('tembaks', [ProductionTembakController::class, 'index'])->name('tembaks.index');
+        Route::get('tembaks/create', [ProductionTembakController::class, 'create'])->name('tembaks.create');
+        Route::post('tembaks', [ProductionTembakController::class, 'store'])->name('tembaks.store');
+        Route::get('tembaks/{tembakBatch}', [ProductionTembakController::class, 'show'])->name('tembaks.show')->whereNumber('tembakBatch');
+        Route::post('tembaks/{tembakBatch}/report', [ProductionTembakController::class, 'storeReport'])->name('tembaks.store-report')->whereNumber('tembakBatch');
 
         // Proses Produksi (Manufaktur & Laporan Harian)
         Route::get('batches', [ProductionBatchController::class, 'index'])->name('batches.index');

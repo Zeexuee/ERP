@@ -46,15 +46,15 @@ class SortMaterialRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'sorted_quantity.required' => 'Kuantitas tersortir wajib diisi.',
-            'sorted_quantity.min' => 'Kuantitas tersortir harus lebih besar dari 0.',
-            'sorted_quantity.max' => 'Kuantitas tersortir tidak boleh melebihi stok yang tersedia.',
-            'destination_type.required' => 'Pilih tujuan sortir (Bahan Baru / Gabung Bahan Ada).',
-            'destination_type.in' => 'Tujuan sortir tidak valid.',
+            'sorted_quantity.required' => 'Kuantitas split wajib diisi.',
+            'sorted_quantity.min' => 'Kuantitas split harus lebih besar dari 0.',
+            'sorted_quantity.max' => 'Kuantitas split tidak boleh melebihi stok yang tersedia.',
+            'destination_type.required' => 'Pilih tujuan split (Bahan Baru / Gabung Bahan Ada).',
+            'destination_type.in' => 'Tujuan split tidak valid.',
             'new_name.required_if' => 'Nama bahan baku baru wajib diisi.',
             'existing_material_id.required_if' => 'Pilih bahan baku yang akan digabungkan.',
             'existing_material_id.exists' => 'Bahan baku tujuan yang dipilih tidak ditemukan.',
-            'actor_by.required' => 'Nama petugas / penimbang sortir wajib diisi.',
+            'actor_by.required' => 'Nama petugas / penanggung jawab wajib diisi.',
         ];
     }
 }

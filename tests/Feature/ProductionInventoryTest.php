@@ -358,4 +358,38 @@ class ProductionInventoryTest extends TestCase
 
         $this->assertEquals(60, MaterialLog::count());
     }
+
+    public function test_production_user_can_register_material_on_the_fly_via_ajax(): void
+    {
+        $user = User::factory()->create(['role' => UserRole::PRODUCTION]);
+        $this->actingAs($user);
+
+        $response = $this->postJson(route('production.materials.store'), [
+            'name' => 'Kayu Tembak Grade Istimewa',
+            'category' => 'Kayu Tembak',
+            'unit' => 'kg',
+            'unit_cost' => 150000,
+        ]);
+
+        $response->assertStatus(201);
+        $response->assertJson([
+            'success' => true,
+            'material' => [
+                'name' => 'Kayu Tembak Grade Istimewa',
+                'category' => 'Kayu Tembak',
+                'unit' => 'kg',
+            ],
+        ]);
+
+        $this->assertDatabaseHas('materials', [
+            'name' => 'Kayu Tembak Grade Istimewa',
+            'category' => 'Kayu Tembak',
+            'unit' => 'kg',
+            'stock_quantity' => 0.00,
+        ]);
+
+        $material = Material::where('name', 'Kayu Tembak Grade Istimewa')->first();
+        $this->assertNotNull($material->code);
+        $this->assertStringStartsWith('MAT-', $material->code);
+    }
 }

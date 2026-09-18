@@ -146,15 +146,27 @@ class MaterialService
     public function storeMaterial(array $data): Material
     {
         return DB::transaction(function () use ($data) {
+            $code = ! empty($data['code']) ? strtoupper(trim($data['code'])) : null;
+            if (! $code) {
+                $maxId = (int) (Material::max('id') ?? 0);
+                $code = 'MAT-'.str_pad($maxId + 1, 4, '0', STR_PAD_LEFT);
+                while (Material::where('code', $code)->exists()) {
+                    $maxId++;
+                    $code = 'MAT-'.str_pad($maxId + 1, 4, '0', STR_PAD_LEFT);
+                }
+            }
+
+            $stockQuantity = isset($data['stock_quantity']) && $data['stock_quantity'] !== '' ? (float) $data['stock_quantity'] : 0.0;
+
             return Material::create([
-                'code' => strtoupper($data['code']),
-                'name' => $data['name'],
-                'category' => $data['category'],
-                'unit' => strtolower($data['unit']),
-                'stock_quantity' => $data['stock_quantity'],
-                'minimum_stock' => $data['minimum_stock'] ?? 0,
-                'unit_cost' => $data['unit_cost'] ?? 0,
-                'last_weighed_at' => $data['stock_quantity'] > 0 ? now() : null,
+                'code' => $code,
+                'name' => trim($data['name']),
+                'category' => ! empty($data['category']) ? trim($data['category']) : 'Kayu Tembak',
+                'unit' => ! empty($data['unit']) ? strtolower(trim($data['unit'])) : 'kg',
+                'stock_quantity' => $stockQuantity,
+                'minimum_stock' => isset($data['minimum_stock']) && $data['minimum_stock'] !== '' ? (float) $data['minimum_stock'] : 0.0,
+                'unit_cost' => isset($data['unit_cost']) && $data['unit_cost'] !== '' ? (float) $data['unit_cost'] : 0.0,
+                'last_weighed_at' => $stockQuantity > 0 ? now() : null,
             ]);
         });
     }
@@ -177,14 +189,14 @@ class MaterialService
     }
 
     /**
-     * Sortir bahan baku menjadi bahan baku baru atau digabung ke bahan baku yang ada dalam DB::transaction().
+     * Split bahan baku menjadi bahan baku baru atau digabung ke bahan baku yang ada dalam DB::transaction().
      */
     public function sortMaterial(Material $sourceMaterial, array $data): array
     {
         $sortedQty = (float) $data['sorted_quantity'];
 
         if ($sortedQty > (float) $sourceMaterial->stock_quantity) {
-            throw new \InvalidArgumentException("Kuantitas tersortir ({$sortedQty} {$sourceMaterial->unit}) melebihi stok yang tersedia ({$sourceMaterial->stock_quantity} {$sourceMaterial->unit}).");
+            throw new \InvalidArgumentException("Kuantitas split ({$sortedQty} {$sourceMaterial->unit}) melebihi stok yang tersedia ({$sourceMaterial->stock_quantity} {$sourceMaterial->unit}).");
         }
 
         return DB::transaction(function () use ($sourceMaterial, $data, $sortedQty) {
@@ -196,7 +208,7 @@ class MaterialService
                 $targetMaterial = Material::findOrFail($data['existing_material_id']);
 
                 if ($sourceMaterial->id === $targetMaterial->id) {
-                    throw new \InvalidArgumentException('Bahan baku tujuan sortir tidak boleh sama dengan bahan baku asal.');
+                    throw new \InvalidArgumentException('Bahan baku tujuan split tidak boleh sama dengan bahan baku asal.');
                 }
 
                 if (strtolower(trim($sourceMaterial->unit)) !== strtolower(trim($targetMaterial->unit))) {
@@ -213,7 +225,7 @@ class MaterialService
                     }
                 }
 
-                $newCategory = ! empty($data['new_category']) ? trim($data['new_category']) : ($sourceMaterial->category ?: 'Hasil Sortir');
+                $newCategory = ! empty($data['new_category']) ? trim($data['new_category']) : ($sourceMaterial->category ?: 'Hasil Split');
 
                 $targetMaterial = Material::create([
                     'code' => $newCode,
@@ -253,9 +265,9 @@ class MaterialService
                 }
             }
 
-            $refNumber = 'SRT-'.date('Ymd').'-'.str_pad($sourceMaterial->id, 4, '0', STR_PAD_LEFT);
+            $refNumber = 'SPL-'.date('Ymd').'-'.str_pad($sourceMaterial->id, 4, '0', STR_PAD_LEFT);
 
-            // 3. Log Alur Barang Keluar (Sortir) untuk Bahan Asal
+            // 3. Log Alur Barang Keluar (Split) untuk Bahan Asal
             MaterialLog::create([
                 'material_id' => $sourceMaterial->id,
                 'type' => 'out',
@@ -263,13 +275,13 @@ class MaterialService
                 'quantity' => $sortedQty,
                 'unit' => $sourceMaterial->unit,
                 'actor_by' => $actorBy,
-                'source_or_destination' => "Sortir -> [{$targetMaterial->code}] {$targetMaterial->name}",
+                'source_or_destination' => "Split -> [{$targetMaterial->code}] {$targetMaterial->name}",
                 'movement_date' => now(),
-                'notes' => $notes ?: 'Hasil sortir pengurangan stok asal.',
+                'notes' => $notes ?: 'Pengurangan stok karena split bahan.',
                 'signature_path' => $signaturePath,
             ]);
 
-            // 4. Log Alur Barang Masuk (Hasil Sortir) untuk Bahan Tujuan
+            // 4. Log Alur Barang Masuk (Hasil Split) untuk Bahan Tujuan
             MaterialLog::create([
                 'material_id' => $targetMaterial->id,
                 'type' => 'in',
@@ -277,9 +289,9 @@ class MaterialService
                 'quantity' => $sortedQty,
                 'unit' => $targetMaterial->unit,
                 'actor_by' => $actorBy,
-                'source_or_destination' => "Hasil Sortir dari [{$sourceMaterial->code}] {$sourceMaterial->name}",
+                'source_or_destination' => "Hasil Split dari [{$sourceMaterial->code}] {$sourceMaterial->name}",
                 'movement_date' => now(),
-                'notes' => $notes ?: 'Penerimaan bahan baku hasil sortir.',
+                'notes' => $notes ?: 'Penerimaan bahan baku hasil split.',
                 'signature_path' => $signaturePath,
             ]);
 

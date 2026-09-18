@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\UserRole;
 use App\Models\Material;
+use App\Models\MaterialSortBatch;
 use App\Models\Product;
 use App\Models\ProductionBatch;
 use App\Models\User;
@@ -126,6 +127,132 @@ class ManufacturingPipelineTest extends TestCase
             'drying_loss_weight' => 2.00,
             'pic_name' => 'Mandor Bambang',
         ]);
+    }
+
+    public function test_can_initiate_sorting_and_submit_sorting_report_separately(): void
+    {
+        $raw = Material::create([
+            'code' => 'MAT-RAW-002',
+            'name' => 'Kayu Mentah Albasia',
+            'category' => 'Kayu Mentah',
+            'unit' => 'kg',
+            'stock_quantity' => 40.00,
+            'unit_cost' => 100000,
+        ]);
+
+        $target = Material::create([
+            'code' => 'MAT-TBK-002',
+            'name' => 'Kayu Tembak Albasia Super',
+            'category' => 'Kayu Tembak',
+            'unit' => 'kg',
+            'stock_quantity' => 5.00,
+            'unit_cost' => 200000,
+        ]);
+
+        // Tahap 1: Inisiasi proses sortir di /production/sorts/create
+        $createResponse = $this->actingAs($this->productionUser)->get(route('production.sorts.create'));
+        $createResponse->assertOk();
+        $createResponse->assertSee('data-stock="40"', false);
+        $createResponse->assertSee('stockDisplayCard');
+
+        $initPayload = [
+            'source_material_id' => $raw->id,
+            'initial_weight' => 25.00,
+            'sort_date' => now()->toDateString(),
+            'pic_name' => 'Petugas Jemur',
+            'notes' => 'Inisiasi jemur bahan albasia.',
+        ];
+
+        $initResponse = $this->actingAs($this->productionUser)->post(route('production.sorts.store'), $initPayload);
+        $initResponse->assertRedirect();
+
+        // Verifikasi stok mentah terpotong dan status in_progress
+        $this->assertEquals(15.00, $raw->fresh()->stock_quantity); // 40 - 25 = 15
+        $sortBatch = MaterialSortBatch::where('source_material_id', $raw->id)->first();
+        $this->assertNotNull($sortBatch);
+        $this->assertEquals('in_progress', $sortBatch->status);
+        $this->assertNull($sortBatch->dried_weight);
+
+        // Halaman detail menampilkan status 'Sedang Disortir' dan form laporan
+        $showResponse = $this->actingAs($this->productionUser)->get(route('production.sorts.show', $sortBatch));
+        $showResponse->assertOk();
+        $showResponse->assertSee('Sedang Disortir');
+        $showResponse->assertDontSee('Dalam Proses Jemur');
+        $showResponse->assertSee('Laporan Hasil Sortir');
+
+        // Halaman index juga menampilkan status 'Sedang Disortir'
+        $indexResponse = $this->actingAs($this->productionUser)->get(route('production.sorts.index'));
+        $indexResponse->assertOk();
+        $indexResponse->assertSee('Sedang Disortir');
+        $indexResponse->assertDontSee('Sedang Jemur');
+
+        // Tahap 2: Input Laporan Hasil Sortir (Report Sorting)
+        $reportPayload = [
+            'dried_weight' => 23.00,
+            'report_date' => now()->toDateString(),
+            'report_pic_name' => 'Mandor Penimbang',
+            'items' => [
+                ['target_material_id' => $target->id, 'result_weight' => 23.00, 'notes' => 'Grade A'],
+            ],
+        ];
+
+        $reportResponse = $this->actingAs($this->productionUser)->post(route('production.sorts.store-report', $sortBatch), $reportPayload);
+        $reportResponse->assertRedirect();
+
+        // Verifikasi batch selesai & stok target bertambah
+        $sortBatch->refresh();
+        $this->assertEquals('completed', $sortBatch->status);
+        $this->assertEquals(23.00, $sortBatch->dried_weight);
+        $this->assertEquals(2.00, $sortBatch->drying_loss_weight); // 25 - 23 = 2
+        $this->assertEquals(28.00, $target->fresh()->stock_quantity); // 5 + 23 = 28
+    }
+
+    public function test_sort_report_fails_if_target_material_has_different_unit_than_source(): void
+    {
+        $raw = Material::create([
+            'code' => 'MAT-RAW-UNIT',
+            'name' => 'Kayu Mentah Unit Test',
+            'category' => 'Kayu Mentah',
+            'unit' => 'kg',
+            'stock_quantity' => 50.00,
+        ]);
+
+        $invalidTarget = Material::create([
+            'code' => 'MAT-TGT-PCS',
+            'name' => 'Kemasan Box Pcs',
+            'category' => 'Kemasan',
+            'unit' => 'pcs',
+            'stock_quantity' => 10.00,
+        ]);
+
+        // Initiate batch
+        $initResponse = $this->actingAs($this->productionUser)->post(route('production.sorts.store'), [
+            'source_material_id' => $raw->id,
+            'initial_weight' => 20.00,
+            'sort_date' => now()->toDateString(),
+            'pic_name' => 'Petugas Sortir',
+        ]);
+        $initResponse->assertRedirect();
+
+        $sortBatch = MaterialSortBatch::where('source_material_id', $raw->id)->first();
+        $this->assertNotNull($sortBatch);
+
+        // Submit report with target having 'pcs' unit instead of 'kg'
+        $reportResponse = $this->actingAs($this->productionUser)->post(route('production.sorts.store-report', $sortBatch), [
+            'dried_weight' => 20.00,
+            'report_date' => now()->toDateString(),
+            'report_pic_name' => 'Mandor Penimbang',
+            'items' => [
+                ['target_material_id' => $invalidTarget->id, 'result_weight' => 20.00],
+            ],
+        ]);
+
+        $reportResponse->assertRedirect();
+        $reportResponse->assertSessionHasErrors('report');
+
+        // Batch should still be in_progress
+        $sortBatch->refresh();
+        $this->assertEquals('in_progress', $sortBatch->status);
     }
 
     public function test_production_batch_starts_from_tembak_and_tracks_pipeline(): void

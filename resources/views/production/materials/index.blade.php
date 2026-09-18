@@ -147,10 +147,10 @@
                                     <button 
                                         type="button" 
                                         onclick="openSortModal({{ $mat->id }}, '{{ addslashes($mat->code) }}', '{{ addslashes($mat->name) }}', {{ (float) $mat->stock_quantity }}, '{{ addslashes($mat->unit) }}')" 
-                                        title="Sortir Bahan Baku"
+                                        title="Split Bahan Baku"
                                         class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 shadow-sm transition"
                                     >
-                                        Sortir
+                                        Split
                                     </button>
                                     <button 
                                         type="button" 
@@ -485,170 +485,174 @@
 </div>
 
 <!-- Modal Sortir Bahan Baku -->
-<div id="sortMaterialModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-    <div class="apple-glass-panel bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-900/10">
+<div id="sortMaterialModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/40 backdrop-blur-sm overflow-hidden">
+    <div class="apple-glass-panel bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl max-w-lg w-full max-h-[88vh] flex flex-col shadow-2xl relative overflow-hidden">
+        <div class="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-900/10 bg-white/60">
             <div>
-                <h3 class="text-sm font-bold text-slate-900">Sortir Bahan Baku</h3>
+                <h3 class="text-sm font-bold text-slate-900">Split Bahan</h3>
                 <p id="sortSubTitle" class="text-[11px] text-slate-600 font-mono mt-0.5"></p>
             </div>
-            <button type="button" onclick="closeSortModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">
+            <button type="button" onclick="closeSortModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold leading-none p-1 transition">
                 ✕
             </button>
         </div>
 
-        <form id="sortMaterialForm" method="POST" class="mt-4 space-y-4">
+        <form id="sortMaterialForm" method="POST" class="flex flex-col flex-1 min-h-0 overflow-hidden">
             @csrf
 
-            <div class="p-3 rounded-2xl bg-slate-100 border border-slate-200 text-xs">
-                <span class="text-slate-600 block">Stok awal bahan baku yang akan disortir:</span>
-                <span id="sortCurrentStockDisplay" class="font-mono font-bold text-slate-900 text-sm"></span>
-            </div>
-
-            <div>
-                <label for="sorted_quantity" class="block text-xs font-semibold text-slate-800 mb-1">
-                    Kuantitas Tersortir <span class="text-red-500">*</span>
-                </label>
-                <div class="relative">
-                    <input 
-                        type="number" 
-                        step="0.01" 
-                        min="0.01" 
-                        id="sorted_quantity" 
-                        name="sorted_quantity" 
-                        required 
-                        class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono text-slate-900 border-slate-300 pr-16"
-                    >
-                    <span id="sortUnitBadge" class="absolute right-3 top-2 text-xs font-bold text-slate-800">
-                        kg
-                    </span>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-slate-800 mb-2">
-                    Tujuan Hasil Sortir <span class="text-red-500">*</span>
-                </label>
-                <div class="grid grid-cols-2 gap-3">
-                    <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-300 cursor-pointer bg-slate-50 hover:bg-slate-100 transition text-xs font-medium text-slate-800">
-                        <input type="radio" name="destination_type" value="new" checked onchange="toggleDestinationType('new')" class="text-slate-900 focus:ring-slate-900">
-                        <span>Jadikan Bahan Baru</span>
-                    </label>
-                    <label class="flex items-center gap-2 p-2.5 rounded-xl border border-slate-300 cursor-pointer bg-slate-50 hover:bg-slate-100 transition text-xs font-medium text-slate-800">
-                        <input type="radio" name="destination_type" value="existing" onchange="toggleDestinationType('existing')" class="text-slate-900 focus:ring-slate-900">
-                        <span>Gabung Bahan Ada</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Options: Bahan Baku Baru -->
-            <div id="newMaterialSection" class="space-y-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
-                <div>
-                    <label for="sort_new_name" class="block text-xs font-semibold text-slate-800 mb-1">
-                        Nama Bahan Baku Baru <span class="text-red-500">*</span>
-                    </label>
-                    <input 
-                        type="text" 
-                        id="sort_new_name" 
-                        name="new_name" 
-                        class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
-                    >
+            <div class="flex-1 overflow-y-auto px-6 py-4 space-y-3.5">
+                <div class="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-xs flex items-center justify-between">
+                    <span class="text-slate-600 font-medium">Stok awal:</span>
+                    <span id="sortCurrentStockDisplay" class="font-mono font-bold text-slate-900 text-xs"></span>
                 </div>
 
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label for="sort_new_code" class="block text-[11px] font-semibold text-slate-700 mb-1">Kode (Opsional)</label>
-                        <input type="text" id="sort_new_code" name="new_code" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input font-mono">
+                        <label for="sorted_quantity" class="block text-xs font-semibold text-slate-800 mb-1">
+                            Kuantitas Split <span class="text-slate-900 font-bold">*</span>
+                        </label>
+                        <div class="relative">
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                min="0.01" 
+                                id="sorted_quantity" 
+                                name="sorted_quantity" 
+                                required 
+                                class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono text-slate-900 border-slate-300 pr-14"
+                            >
+                            <span id="sortUnitBadge" class="absolute right-3 top-2 text-xs font-mono font-bold text-slate-600">
+                                kg
+                            </span>
+                        </div>
                     </div>
+
                     <div>
-                        <label for="sort_new_category" class="block text-[11px] font-semibold text-slate-700 mb-1">Kategori (Opsional)</label>
-                        <input type="text" id="sort_new_category" name="new_category" list="sortCategoriesDatalist" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input">
-                        <datalist id="sortCategoriesDatalist">
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat }}">
+                        <label for="sort_actor_by" class="block text-xs font-semibold text-slate-800 mb-1">
+                            PIC <span class="text-slate-900 font-bold">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="sort_actor_by" 
+                            name="actor_by" 
+                            required 
+                            class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium"
+                        >
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-800 mb-1.5">
+                        Tujuan Hasil Split <span class="text-slate-900 font-bold">*</span>
+                    </label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-300 cursor-pointer bg-slate-50 hover:bg-slate-100 transition text-xs font-medium text-slate-800">
+                            <input type="radio" name="destination_type" value="new" checked onchange="toggleDestinationType('new')" class="text-slate-900 focus:ring-slate-900">
+                            <span>Jadikan Bahan Baru</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-xl border border-slate-300 cursor-pointer bg-slate-50 hover:bg-slate-100 transition text-xs font-medium text-slate-800">
+                            <input type="radio" name="destination_type" value="existing" onchange="toggleDestinationType('existing')" class="text-slate-900 focus:ring-slate-900">
+                            <span>Gabung Bahan Ada</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Options: Bahan Baku Baru -->
+                <div id="newMaterialSection" class="space-y-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div>
+                        <label for="sort_new_name" class="block text-xs font-semibold text-slate-800 mb-1">
+                            Nama Bahan Baku Baru <span class="text-slate-900 font-bold">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="sort_new_name" 
+                            name="new_name" 
+                            class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
+                        >
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label for="sort_new_code" class="block text-[11px] font-semibold text-slate-700 mb-1">Kode (Opsional)</label>
+                            <input type="text" id="sort_new_code" name="new_code" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input font-mono">
+                        </div>
+                        <div>
+                            <label for="sort_new_category" class="block text-[11px] font-semibold text-slate-700 mb-1">Kategori (Opsional)</label>
+                            <input type="text" id="sort_new_category" name="new_category" list="sortCategoriesDatalist" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input">
+                            <datalist id="sortCategoriesDatalist">
+                                @foreach($categories as $cat)
+                                    <option value="{{ $cat }}">
+                                @endforeach
+                            </datalist>
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-slate-500">
+                        Satuan bahan baru otomatis mengikuti bahan asal: <strong id="sortNewMaterialUnitNotice" class="font-mono text-slate-800">kg</strong>.
+                    </p>
+                </div>
+
+                <!-- Options: Gabung ke Bahan Existing -->
+                <div id="existingMaterialSection" class="hidden space-y-2.5 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                    <div>
+                        <label for="existing_material_id" class="block text-xs font-semibold text-slate-800 mb-1">
+                            Pilih Bahan Baku Tujuan <span class="text-slate-900 font-bold">*</span>
+                        </label>
+                        <select 
+                            id="existing_material_id" 
+                            name="existing_material_id" 
+                            onchange="validateUnitMatch()"
+                            class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
+                        >
+                            <option value="" data-unit="">Pilih Bahan Baku Tujuan</option>
+                            @foreach($allMaterials as $m)
+                                <option value="{{ $m->id }}" data-unit="{{ strtolower($m->unit) }}">
+                                    [{{ $m->code }}] {{ $m->name }} (Stok: {{ number_format($m->stock_quantity, 1) }} {{ $m->unit }})
+                                </option>
                             @endforeach
-                        </datalist>
+                        </select>
+                    </div>
+
+                    <!-- Unit mismatch alert: COLORLESS & ICON-LESS! -->
+                    <div id="unitMismatchAlert" class="hidden p-2.5 rounded-xl bg-slate-100 border border-slate-300 text-slate-900 text-xs font-semibold">
+                        <p class="font-bold">Satuan tidak dapat digabungkan</p>
+                        <p id="unitMismatchText" class="mt-0.5 text-[11px] font-normal text-slate-700"></p>
                     </div>
                 </div>
-                <p class="text-[10px] text-slate-500 italic">
-                    Satuan bahan baru otomatis mengikuti satuan bahan asal: <strong id="sortNewMaterialUnitNotice">kg</strong>.
-                </p>
-            </div>
 
-            <!-- Options: Gabung ke Bahan Existing -->
-            <div id="existingMaterialSection" class="hidden space-y-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
                 <div>
-                    <label for="existing_material_id" class="block text-xs font-semibold text-slate-800 mb-1">
-                        Pilih Bahan Baku Tujuan <span class="text-red-500">*</span>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="block text-xs font-semibold text-slate-800">
+                            Tanda Tangan
+                        </label>
+                        <button type="button" onclick="clearSortSignature()" class="text-[10px] text-slate-500 hover:text-slate-800 underline">
+                            Hapus
+                        </button>
+                    </div>
+                    <div class="border border-slate-300 rounded-xl overflow-hidden bg-white">
+                        <canvas id="sortSignatureCanvas" width="450" height="95" class="w-full h-24 touch-none cursor-crosshair block bg-white"></canvas>
+                    </div>
+                    <input type="hidden" name="signature_data" id="sort_signature_data">
+                </div>
+
+                <div>
+                    <label for="sort_notes" class="block text-xs font-semibold text-slate-800 mb-1">
+                        Catatan Split
                     </label>
-                    <select 
-                        id="existing_material_id" 
-                        name="existing_material_id" 
-                        onchange="validateUnitMatch()"
+                    <textarea 
+                        id="sort_notes" 
+                        name="notes" 
+                        rows="2" 
                         class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
-                    >
-                        <option value="" data-unit="">-- Pilih Bahan Baku Tujuan --</option>
-                        @foreach($allMaterials as $m)
-                            <option value="{{ $m->id }}" data-unit="{{ strtolower($m->unit) }}">
-                                [{{ $m->code }}] {{ $m->name }} (Stok: {{ number_format($m->stock_quantity, 1) }} {{ $m->unit }})
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- Unit mismatch alert -->
-                <div id="unitMismatchAlert" class="hidden p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
-                    <p class="font-bold">Satuan tidak dapat digabungkan!</p>
-                    <p id="unitMismatchText" class="mt-0.5 text-[11px]"></p>
+                    ></textarea>
                 </div>
             </div>
 
-            <div>
-                <label for="sort_actor_by" class="block text-xs font-semibold text-slate-800 mb-1">
-                    Nama Petugas / Penimbang <span class="text-red-500">*</span>
-                </label>
-                <input 
-                    type="text" 
-                    id="sort_actor_by" 
-                    name="actor_by" 
-                    required 
-                    class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium"
-                >
-            </div>
-
-            <div>
-                <div class="flex items-center justify-between mb-1">
-                    <label class="block text-xs font-semibold text-slate-800">
-                        Tanda Tangan Petugas / Penimbang
-                    </label>
-                    <button type="button" onclick="clearSortSignature()" class="text-[10px] text-slate-500 hover:text-slate-800 underline">
-                        Bersihkan Tanda Tangan
-                    </button>
-                </div>
-                <div class="border border-slate-300 rounded-xl overflow-hidden bg-white">
-                    <canvas id="sortSignatureCanvas" width="350" height="110" class="w-full h-28 touch-none cursor-crosshair block bg-white"></canvas>
-                </div>
-                <input type="hidden" name="signature_data" id="sort_signature_data">
-            </div>
-
-            <div>
-                <label for="sort_notes" class="block text-xs font-semibold text-slate-800 mb-1">
-                    Catatan Sortir
-                </label>
-                <textarea 
-                    id="sort_notes" 
-                    name="notes" 
-                    rows="2" 
-                    class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
-                ></textarea>
-            </div>
-
-            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
+            <div class="shrink-0 px-6 py-3 border-t border-slate-900/10 bg-slate-50/90 flex items-center justify-end gap-2">
                 <button type="button" onclick="closeSortModal()" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
                     Batal
                 </button>
                 <button type="submit" id="submitSortBtn" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm">
-                    Proses Sortir
+                    Proses Split
                 </button>
             </div>
         </form>
@@ -678,7 +682,7 @@
         const unitBadge = document.getElementById('sortUnitBadge');
         const unitNotice = document.getElementById('sortNewMaterialUnitNotice');
 
-        form.action = `/production/materials/${id}/sort`;
+        form.action = `/production/materials/${id}/split`;
         title.innerText = `[${code}] ${name}`;
         stockDisplay.innerText = `${stock} ${unit}`;
         qtyInput.max = stock;
