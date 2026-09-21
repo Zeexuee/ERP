@@ -1,11 +1,11 @@
-@extends('layouts.app', ['title' => 'Inisiasi Sortir Kayu'])
+@extends('layouts.app', ['title' => 'Inisiasi Pencairan Getah'])
 
 @section('content')
 <div class="max-w-3xl mx-auto space-y-6">
 
     <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-            <h2 class="text-xl font-bold text-slate-900">Inisiasi Sortir Kayu</h2>
+            <h2 class="text-xl font-bold text-slate-900">Inisiasi Pencairan Getah</h2>
             <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
                 Warehouse
             </span>
@@ -13,7 +13,7 @@
                 Tahap 1
             </span>
         </div>
-        <a href="{{ route('production.sorts.index') }}" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-xs transition">
+        <a href="{{ route('production.melts.index') }}" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-xs transition">
             Kembali
         </a>
     </div>
@@ -28,7 +28,7 @@
         </div>
     @endif
 
-    <form action="{{ route('production.sorts.store') }}" method="POST" id="sortInitForm" class="space-y-6">
+    <form action="{{ route('production.melts.store') }}" method="POST" id="meltInitForm" class="space-y-6">
         @csrf
 
         <div class="apple-glass-panel rounded-3xl p-6 shadow-md space-y-4">
@@ -39,7 +39,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">
-                        Bahan Baku Mentah Asal
+                        Bahan Baku (Getah Padat)
                     </label>
                     <select name="source_material_id" id="sourceMaterialSelect" class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold" required>
                         <option value="">Pilih Bahan Baku</option>
@@ -74,8 +74,8 @@
                     </label>
                     <input 
                         type="date" 
-                        name="sort_date" 
-                        value="{{ old('sort_date') }}" 
+                        name="melt_date" 
+                        value="{{ old('melt_date', date('Y-m-d')) }}" 
                         class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold" 
                         required
                     >
@@ -142,11 +142,11 @@
         </div>
 
         <div class="flex items-center justify-end gap-3 pt-2">
-            <a href="{{ route('production.sorts.index') }}" class="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-xs transition">
+            <a href="{{ route('production.melts.index') }}" class="px-5 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-xs transition">
                 Batal
             </a>
             <button type="submit" id="submitBtn" class="px-6 py-2.5 rounded-xl btn-dark text-xs font-bold shadow-md transition">
-                Simpan Inisiasi Sortir
+                Simpan Inisiasi Pencairan
             </button>
         </div>
     </form>
@@ -154,69 +154,6 @@
 </div>
 
 <script>
-    let canvas, ctx, isDrawing = false;
-
-    function initCanvas() {
-        canvas = document.getElementById('sortSignatureCanvas');
-        if (!canvas) return;
-
-        ctx = canvas.getContext('2d');
-        canvas.width = canvas.parentElement.clientWidth || 350;
-        canvas.height = 144;
-
-        ctx.strokeStyle = '#0f172a';
-        ctx.lineWidth = 2.5;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        function getPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return {
-                x: clientX - rect.left,
-                y: clientY - rect.top
-            };
-        }
-
-        function start(e) {
-            isDrawing = true;
-            const pos = getPos(e);
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
-            e.preventDefault();
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-            const pos = getPos(e);
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
-            e.preventDefault();
-        }
-
-        function end() {
-            if (isDrawing) {
-                isDrawing = false;
-                document.getElementById('sortSignatureInput').value = canvas.toDataURL('image/png');
-            }
-        }
-
-        canvas.addEventListener('mousedown', start);
-        canvas.addEventListener('mousemove', draw);
-        window.addEventListener('mouseup', end);
-
-        canvas.addEventListener('touchstart', start, { passive: false });
-        canvas.addEventListener('touchmove', draw, { passive: false });
-        window.addEventListener('touchend', end);
-    }
-
-    function clearSignature() {
-        if (!ctx) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        document.getElementById('sortSignatureInput').value = '';
-    }
-
     const sourceSelect = document.getElementById('sourceMaterialSelect');
     const stockDisplayCard = document.getElementById('stockDisplayCard');
     const stockCardWrapper = document.getElementById('stockCardWrapper');
@@ -307,19 +244,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        initCanvas();
         updateStockDisplay();
-    });
-
-    document.getElementById('sortInitForm').addEventListener('submit', function (e) {
-        if (canvas) {
-            const blank = document.createElement('canvas');
-            blank.width = canvas.width;
-            blank.height = canvas.height;
-            if (canvas.toDataURL() !== blank.toDataURL()) {
-                document.getElementById('sortSignatureInput').value = canvas.toDataURL('image/png');
-            }
-        }
     });
 </script>
 @endsection

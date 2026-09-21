@@ -19,7 +19,7 @@ class ProductionTembakController extends Controller
      */
     public function index(Request $request): View
     {
-        $query = ProductionTembakBatch::with(['woodMaterial', 'resinMaterial', 'residualResinMaterial', 'outputMaterial'])
+        $query = ProductionTembakBatch::with(['materials.material', 'residualResinMaterial', 'outputMaterial'])
             ->latest('tembak_date')
             ->latest('id');
 
@@ -28,8 +28,7 @@ class ProductionTembakController extends Controller
                 $q->where('tembak_code', 'like', "%{$search}%")
                     ->orWhere('pic_name', 'like', "%{$search}%")
                     ->orWhere('report_pic_name', 'like', "%{$search}%")
-                    ->orWhereHas('woodMaterial', fn ($wq) => $wq->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"))
-                    ->orWhereHas('resinMaterial', fn ($rq) => $rq->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"))
+                    ->orWhereHas('materials.material', fn ($mq) => $mq->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"))
                     ->orWhereHas('outputMaterial', fn ($oq) => $oq->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"));
             });
         }
@@ -37,8 +36,8 @@ class ProductionTembakController extends Controller
         $tembakBatches = $query->paginate(15)->withQueryString();
 
         $totalBatches = ProductionTembakBatch::count();
-        $totalWoodProcessed = ProductionTembakBatch::sum('wood_weight');
-        $totalResinUsed = ProductionTembakBatch::sum('resin_weight');
+        $totalWoodProcessed = \App\Models\ProductionTembakMaterial::where('type', 'wood')->sum('weight');
+        $totalResinUsed = \App\Models\ProductionTembakMaterial::where('type', 'resin')->sum('weight');
         $totalDriedProduced = ProductionTembakBatch::sum('dried_result_weight');
 
         return view('production.tembaks.index', compact(
@@ -87,7 +86,7 @@ class ProductionTembakController extends Controller
      */
     public function show(ProductionTembakBatch $tembakBatch): View
     {
-        $tembakBatch->load(['woodMaterial', 'resinMaterial', 'residualResinMaterial', 'outputMaterial']);
+        $tembakBatch->load(['materials.material', 'residualResinMaterial', 'outputMaterial']);
         $materials = Material::orderBy('name')->get();
 
         return view('production.tembaks.show', compact('tembakBatch', 'materials'));

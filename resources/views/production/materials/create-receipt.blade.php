@@ -10,7 +10,7 @@
             <p class="text-xs text-slate-700 mt-0.5">Pencatatan pasokan bahan baku yang tiba di gudang pabrik Gaharu Sana'i.</p>
         </div>
         <a href="{{ route('production.materials.index') }}" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-sm transition">
-            ← Kembali ke Gudang
+            ← Kembali ke Warehouse
         </a>
     </div>
 
@@ -45,7 +45,7 @@
                         type="date" 
                         id="received_date" 
                         name="received_date" 
-                        value="{{ old('received_date', date('Y-m-d')) }}" 
+                        value="{{ old('received_date') }}" 
                         required 
                         class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 font-medium border-slate-300"
                     >
@@ -85,24 +85,27 @@
 
                 <!-- Form Kategori & Satuan (Hanya muncul jika Bahan Baku Baru) -->
                 <div id="newMaterialFields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                    <div>
+                    <div class="relative overflow-visible">
                         <label for="category" class="block text-xs font-semibold text-slate-800 mb-1">
                             Kategori Bahan Baku <span class="text-red-500">*</span>
                         </label>
-                        <input 
-                            type="text" 
-                            id="category" 
-                            name="category" 
-                            list="categoryList"
-                            value="{{ old('category', 'Bahan Baku') }}"
-                            class="w-full px-3 py-2 rounded-xl text-xs apple-input bg-white text-slate-900 font-medium border-slate-300"
-                        >
-                        <datalist id="categoryList">
-                            @foreach($categories as $cat)
-                                <option value="{{ $cat }}">
-                            @endforeach
-                        </datalist>
-                        <span class="text-[10px] text-slate-600 mt-0.5 block">Pilih dari daftar atau ketik kategori baru.</span>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="category" 
+                                name="category" 
+                                value="{{ old('category', '') }}"
+                                autocomplete="off"
+                                placeholder="Pilih / ketik kategori..."
+                                class="w-full px-3 py-2 pr-7 rounded-xl text-xs apple-input bg-white text-slate-900 font-medium border-slate-300 cursor-pointer"
+                            >
+                            <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div id="categoryReceiptDropdown" class="hidden absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-300 shadow-2xl rounded-2xl z-50 overflow-hidden max-h-48 overflow-y-auto"></div>
                         @error('category')
                             <span class="text-red-600 text-[10px]">{{ $message }}</span>
                         @enderror
@@ -118,7 +121,8 @@
                             onchange="onUnitChange(this.value)"
                             class="w-full px-3 py-2 rounded-xl text-xs apple-input bg-white text-slate-900 font-medium border-slate-300"
                         >
-                            <option value="kg" {{ old('unit', 'kg') == 'kg' ? 'selected' : '' }}>kg (Kilogram)</option>
+                            <option value="">Pilih Satuan...</option>
+                            <option value="kg" {{ old('unit') == 'kg' ? 'selected' : '' }}>kg (Kilogram)</option>
                             <option value="gram" {{ old('unit') == 'gram' ? 'selected' : '' }}>gram (Gram)</option>
                             <option value="unit" {{ old('unit') == 'unit' ? 'selected' : '' }}>unit (Unit)</option>
                             <option value="pcs" {{ old('unit') == 'pcs' ? 'selected' : '' }}>pcs (Pieces)</option>
@@ -222,25 +226,6 @@
                     @enderror
                 </div>
             </div>
-
-            <!-- Nama Penerima Gudang -->
-            <div>
-                <label for="received_by" class="block text-xs font-semibold text-slate-800 mb-1">
-                    Petugas Penerima Gudang <span class="text-red-500">*</span>
-                </label>
-                <input 
-                    type="text" 
-                    id="received_by" 
-                    name="received_by" 
-                    value="{{ old('received_by') }}" 
-                    required 
-                    class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium"
-                >
-                @error('received_by')
-                    <span class="text-red-600 text-[10px]">{{ $message }}</span>
-                @enderror
-            </div>
-
             <!-- Catatan Fisik / Kualitas -->
             <div>
                 <label for="notes" class="block text-xs font-semibold text-slate-800 mb-1">
@@ -274,25 +259,6 @@
                     <img id="imagePreview" src="#" alt="Pratinjau Foto" class="h-32 rounded-xl border border-slate-300 object-cover shadow-sm">
                 </div>
                 @error('image')
-                    <span class="text-red-600 text-[10px]">{{ $message }}</span>
-                @enderror
-            </div>
-
-            <!-- Tanda Tangan Digital Penerima -->
-            <div>
-                <div class="flex items-center justify-between mb-1">
-                    <label class="block text-xs font-semibold text-slate-800">
-                        Tanda Tangan Digital Penerima Gudang <span class="text-slate-600 text-[10px] font-normal">(Opsional)</span>
-                    </label>
-                    <button type="button" onclick="clearSignature()" class="text-[11px] font-semibold text-slate-700 hover:text-slate-900 underline">
-                        Hapus Tanda Tangan
-                    </button>
-                </div>
-                <div class="border border-slate-300 rounded-2xl bg-white overflow-hidden shadow-inner relative">
-                    <canvas id="signatureCanvas" class="w-full h-32 cursor-crosshair touch-none bg-white block"></canvas>
-                </div>
-                <input type="hidden" id="signature_data" name="signature_data" value="{{ old('signature_data') }}">
-                @error('signature_data')
                     <span class="text-red-600 text-[10px]">{{ $message }}</span>
                 @enderror
             </div>
@@ -520,8 +486,95 @@
         if (signatureInput) signatureInput.value = '';
     }
 
+    // Searchable Combobox with Register On-the-Fly for Categories (Rule 7.1)
+    function setupCategoryCombobox(inputId, dropdownId, initialCategories) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
+        if (!input || !dropdown) return;
+
+        let categories = Array.isArray(initialCategories) ? [...initialCategories] : [];
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text || '';
+            return div.innerHTML;
+        }
+
+        function render(query = '') {
+            const q = (query || '').trim();
+            const qLower = q.toLowerCase();
+
+            dropdown.innerHTML = '';
+
+            const topItem = document.createElement('div');
+            topItem.className = 'px-3.5 py-2.5 bg-slate-900 text-white hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800 transition select-none';
+            if (q.length > 0) {
+                topItem.innerHTML = `
+                    <span class="text-xs font-bold">+ Tambahkan "<strong>${escapeHtml(q)}</strong>"</span>
+                    <span class="text-[10px] font-semibold opacity-80 uppercase tracking-wider">Register On-the-Fly</span>
+                `;
+                topItem.onmousedown = (e) => {
+                    e.preventDefault();
+                    selectCat(q);
+                };
+            } else {
+                topItem.innerHTML = `
+                    <span class="text-xs font-bold">+ Tambah Kategori Baru...</span>
+                    <span class="text-[10px] font-semibold opacity-80 uppercase tracking-wider">Ketik Nama</span>
+                `;
+                topItem.onmousedown = (e) => {
+                    e.preventDefault();
+                    input.focus();
+                };
+            }
+            dropdown.appendChild(topItem);
+
+            const matches = categories.filter(c => !qLower || c.toLowerCase().includes(qLower));
+
+            if (matches.length > 0) {
+                matches.forEach(c => {
+                    const item = document.createElement('div');
+                    const isSelected = input.value && input.value.trim().toLowerCase() === c.toLowerCase();
+                    item.className = `px-3.5 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between border-b border-slate-100 last:border-0 transition select-none ${isSelected ? 'bg-slate-50 font-bold text-slate-900' : 'text-slate-700 text-xs'}`;
+                    item.innerHTML = `
+                        <span class="text-xs">${escapeHtml(c)}</span>
+                        ${isSelected ? '<span class="text-[10px] font-semibold text-slate-500">Terpilih</span>' : ''}
+                    `;
+                    item.onmousedown = (e) => {
+                        e.preventDefault();
+                        selectCat(c);
+                    };
+                    dropdown.appendChild(item);
+                });
+            } else if (q.length > 0) {
+                const noMatch = document.createElement('div');
+                noMatch.className = 'px-3.5 py-2 text-[11px] text-slate-400 italic';
+                noMatch.innerText = 'Kategori belum terdaftar. Klik opsi di atas untuk mendaftarkannya.';
+                dropdown.appendChild(noMatch);
+            }
+
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectCat(catName) {
+            input.value = catName;
+            if (!categories.some(c => c.toLowerCase() === catName.toLowerCase())) {
+                categories.push(catName);
+            }
+            dropdown.classList.add('hidden');
+        }
+
+        input.addEventListener('focus', () => render(input.value));
+        input.addEventListener('input', () => render(input.value));
+        input.addEventListener('click', () => render(input.value));
+        input.addEventListener('blur', () => {
+            setTimeout(() => dropdown.classList.add('hidden'), 200);
+        });
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
         initSignatureCanvas();
+        setupCategoryCombobox('category', 'categoryReceiptDropdown', @json($categories));
         const matNameInput = document.getElementById('material_name');
         if (matNameInput && matNameInput.value) {
             onMaterialNameInput(matNameInput.value);

@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Warehouse - Sortir Kayu'])
+@extends('layouts.app', ['title' => 'Warehouse - Potong Ukir'])
 
 @section('content')
 <div class="space-y-6">
@@ -8,14 +8,14 @@
             <div class="flex items-center gap-2">
                 <h2 class="text-xl font-bold text-slate-900">Warehouse</h2>
                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-white">
-                    Sortir Kayu
+                    Potong Ukir
                 </span>
             </div>
-            <p class="text-xs text-slate-500 mt-0.5">Pemilahan dan pembagian kualitas kayu mentah ke bahan siap tembak.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Pemotongan, pengukiran, dan pembagian kualitas kayu.</p>
         </div>
 
         <div class="flex items-center gap-2">
-            <a href="{{ route('production.sorts.create') }}" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm transition">
+            <a href="{{ route('production.carves.create') }}" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm transition">
                 Inisiasi Baru
             </a>
         </div>
@@ -30,7 +30,7 @@
             
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-blue-900/10 pb-4">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-bold text-slate-900">Proses Sortir Berjalan</span>
+                    <span class="text-sm font-bold text-slate-900">Proses Potong Ukir Berjalan</span>
                     <span class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-blue-100 text-blue-800 border border-blue-200">
                         {{ $ongoingBatches->total() }} Data
                     </span>
@@ -41,7 +41,7 @@
                 <table class="w-full text-left text-xs text-slate-800">
                     <thead>
                         <tr class="border-b border-blue-900/10 text-slate-500 font-extrabold uppercase text-[10px] tracking-wider">
-                            <th class="py-3 px-3">Kode Sortir</th>
+                            <th class="py-3 px-3">Kode Potong Ukir</th>
                             <th class="py-3 px-3">Tanggal Inisiasi</th>
                             <th class="py-3 px-3">Bahan Mentah Asal</th>
                             <th class="py-3 px-3">PIC</th>
@@ -52,13 +52,13 @@
                         @forelse($ongoingBatches as $batch)
                             <tr class="hover:bg-white/60 transition">
                                 <td class="py-3 px-3">
-                                    <div class="font-bold font-mono text-slate-900">{{ $batch->sort_code }}</div>
+                                    <div class="font-bold font-mono text-slate-900">{{ $batch->carve_code }}</div>
                                     <span class="inline-block mt-0.5 px-2 py-0.2 rounded-full text-[9px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                                        Sedang Disortir
+                                        Sedang Dikerjakan
                                     </span>
                                 </td>
                                 <td class="py-3 px-3 text-slate-600">
-                                    {{ $batch->sort_date->format('d/m/Y') }}
+                                    {{ $batch->carve_date->format('d/m/Y') }}
                                 </td>
                                 <td class="py-3 px-3">
                                     <div class="font-bold text-slate-900">{{ $batch->sourceMaterial->name ?? '-' }}</div>
@@ -68,7 +68,7 @@
                                     {{ $batch->pic_name }}
                                 </td>
                                 <td class="py-3 px-3 text-right">
-                                    <a href="{{ route('production.sorts.show', $batch) }}" class="px-3 py-1.5 rounded-xl btn-dark font-semibold text-[11px] shadow-xs transition inline-block whitespace-nowrap text-center">
+                                    <a href="{{ route('production.carves.show', $batch) }}" class="px-3 py-1.5 rounded-xl btn-dark font-semibold text-[11px] shadow-xs transition inline-block whitespace-nowrap text-center">
                                         Catat Laporan
                                     </a>
                                 </td>
@@ -76,7 +76,7 @@
                         @empty
                             <tr>
                                 <td colspan="5" class="py-8 text-center text-slate-400 text-xs">
-                                    Tidak ada proses sortir yang sedang berjalan.
+                                    Tidak ada proses potong ukir yang sedang berjalan.
                                 </td>
                             </tr>
                         @endforelse
@@ -95,13 +95,13 @@
         <div class="apple-glass-panel rounded-3xl p-6 shadow-md space-y-4">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-900/10 pb-4">
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-bold text-slate-900">Riwayat Sortir Selesai</span>
+                    <span class="text-sm font-bold text-slate-900">Riwayat Potong Ukir Selesai</span>
                     <span class="px-2 py-0.5 text-[11px] font-bold rounded-full badge-dark">
                         {{ $completedBatches->total() }} Data
                     </span>
                 </div>
 
-                <form method="GET" action="{{ route('production.sorts.index') }}" class="flex items-center gap-2">
+                <form method="GET" action="{{ route('production.carves.index') }}" class="flex items-center gap-2">
                     <input 
                         type="text" 
                         name="search" 
@@ -110,7 +110,7 @@
                         placeholder="Cari Riwayat..."
                     >
                     @if(request('search'))
-                        <a href="{{ route('production.sorts.index') }}" class="text-xs text-slate-500 hover:text-slate-900 underline">Reset</a>
+                        <a href="{{ route('production.carves.index') }}" class="text-xs text-slate-500 hover:text-slate-900 underline">Reset</a>
                     @endif
                 </form>
             </div>
@@ -119,10 +119,10 @@
                 <table class="w-full text-left text-xs text-slate-800">
                     <thead>
                         <tr class="border-b border-slate-900/10 text-slate-500 font-extrabold uppercase text-[10px] tracking-wider">
-                            <th class="py-3 px-3">Kode Sortir</th>
+                            <th class="py-3 px-3">Kode Potong Ukir</th>
                             <th class="py-3 px-3">Tanggal</th>
                             <th class="py-3 px-3">Bahan Mentah Asal</th>
-                            <th class="py-3 px-3">Hasil Sortir & Susut</th>
+                            <th class="py-3 px-3">Hasil & Susut</th>
                             <th class="py-3 px-3">Alokasi Bahan</th>
                             <th class="py-3 px-3">PIC</th>
                             <th class="py-3 px-3 text-right">Aksi</th>
@@ -132,13 +132,13 @@
                         @forelse($completedBatches as $batch)
                             <tr class="hover:bg-white/50 transition">
                                 <td class="py-3 px-3">
-                                    <div class="font-bold font-mono text-slate-900">{{ $batch->sort_code }}</div>
+                                    <div class="font-bold font-mono text-slate-900">{{ $batch->carve_code }}</div>
                                     <span class="inline-block mt-0.5 px-2 py-0.2 rounded-full text-[9px] font-bold bg-slate-900 text-white">
                                         Selesai
                                     </span>
                                 </td>
                                 <td class="py-3 px-3 text-slate-600">
-                                    {{ $batch->sort_date->format('d/m/Y') }}
+                                    {{ $batch->carve_date->format('d/m/Y') }}
                                 </td>
                                 <td class="py-3 px-3">
                                     <div class="font-bold text-slate-900">{{ $batch->sourceMaterial->name ?? '-' }}</div>
@@ -166,7 +166,7 @@
                                     {{ $batch->report_pic_name ?? $batch->pic_name }}
                                 </td>
                                 <td class="py-3 px-3 text-right">
-                                    <a href="{{ route('production.sorts.show', $batch) }}" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-semibold text-[11px] shadow-xs transition inline-block whitespace-nowrap text-center">
+                                    <a href="{{ route('production.carves.show', $batch) }}" class="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-semibold text-[11px] shadow-xs transition inline-block whitespace-nowrap text-center">
                                         Rincian
                                     </a>
                                 </td>
@@ -174,7 +174,7 @@
                         @empty
                             <tr>
                                 <td colspan="7" class="py-8 text-center text-slate-400 text-xs">
-                                    Belum ada riwayat sortir yang selesai.
+                                    Belum ada riwayat potong ukir yang selesai.
                                 </td>
                             </tr>
                         @endforelse

@@ -42,7 +42,7 @@ class MaterialController extends Controller
 
         $materials = $query->orderBy('name')->paginate(15)->withQueryString();
 
-        $categories = Material::select('category')->distinct()->pluck('category');
+        $categories = Material::getAllCategories();
 
         $totalMaterials = Material::count();
         $totalStockValue = Material::all()->sum(fn ($m) => (float) $m->stock_quantity * (float) $m->unit_cost);
@@ -72,7 +72,7 @@ class MaterialController extends Controller
     public function createReceipt(): View
     {
         $materials = Material::orderBy('name')->get();
-        $categories = Material::select('category')->distinct()->whereNotNull('category')->pluck('category');
+        $categories = Material::getAllCategories();
 
         $latestReceipt = MaterialReceipt::latest('id')->first();
         $nextNumber = 'IN-'.date('Y').'-'.str_pad(($latestReceipt ? $latestReceipt->id + 1 : 1), 4, '0', STR_PAD_LEFT);

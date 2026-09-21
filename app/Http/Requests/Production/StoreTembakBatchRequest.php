@@ -23,10 +23,12 @@ class StoreTembakBatchRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'wood_material_id' => ['required', 'exists:materials,id'],
-            'wood_weight' => ['required', 'numeric', 'min:0.01'],
-            'resin_material_id' => ['required', 'exists:materials,id'],
-            'resin_weight' => ['required', 'numeric', 'min:0.01'],
+            'woods' => ['required', 'array', 'min:1'],
+            'woods.*.material_id' => ['required', 'exists:materials,id'],
+            'woods.*.weight' => ['required', 'numeric', 'min:0.01'],
+            'resins' => ['required', 'array', 'min:1'],
+            'resins.*.material_id' => ['required', 'exists:materials,id'],
+            'resins.*.weight' => ['required', 'numeric', 'min:0.01'],
             'tembak_date' => ['required', 'date'],
             'pic_name' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
@@ -42,14 +44,18 @@ class StoreTembakBatchRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'wood_material_id.required' => 'Pilih bahan kayu yang akan diproses tembak.',
-            'wood_material_id.exists' => 'Bahan kayu yang dipilih tidak valid.',
-            'wood_weight.required' => 'Berat kayu wajib diisi.',
-            'wood_weight.min' => 'Berat kayu minimal 0.01.',
-            'resin_material_id.required' => 'Pilih minyak atau resin yang digunakan.',
-            'resin_material_id.exists' => 'Bahan minyak/resin yang dipilih tidak valid.',
-            'resin_weight.required' => 'Berat/kuantitas resin yang digunakan wajib diisi.',
-            'resin_weight.min' => 'Kuantitas resin minimal 0.01.',
+            'woods.required' => 'Bahan kayu wajib diisi.',
+            'woods.min' => 'Pilih minimal satu bahan kayu.',
+            'woods.*.material_id.required' => 'Pilih bahan kayu yang akan diproses tembak.',
+            'woods.*.material_id.exists' => 'Bahan kayu yang dipilih tidak valid.',
+            'woods.*.weight.required' => 'Berat kayu wajib diisi.',
+            'woods.*.weight.min' => 'Berat kayu minimal 0.01.',
+            'resins.required' => 'Minyak atau resin wajib diisi.',
+            'resins.min' => 'Pilih minimal satu minyak atau resin.',
+            'resins.*.material_id.required' => 'Pilih minyak atau resin yang digunakan.',
+            'resins.*.material_id.exists' => 'Bahan minyak/resin yang dipilih tidak valid.',
+            'resins.*.weight.required' => 'Kuantitas resin wajib diisi.',
+            'resins.*.weight.min' => 'Kuantitas resin minimal 0.01.',
             'tembak_date.required' => 'Tanggal proses tembak wajib diisi.',
             'pic_name.required' => 'Nama penanggung jawab (PIC) wajib diisi.',
         ];

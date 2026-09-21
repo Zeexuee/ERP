@@ -77,7 +77,7 @@ class MaterialService
                 'unit_cost' => $validatedData['unit_cost'] ?? $material->unit_cost,
                 'source_or_supplier' => $validatedData['source_or_supplier'],
                 'received_date' => $validatedData['received_date'],
-                'received_by' => $validatedData['received_by'],
+                'received_by' => $validatedData['received_by'] ?? auth()->user()?->name ?? 'Sistem',
                 'notes' => $validatedData['notes'] ?? null,
                 'signature_path' => $signaturePath,
                 'image_path' => $imagePath,
@@ -97,7 +97,7 @@ class MaterialService
                 'reference_number' => $receiptNumber,
                 'quantity' => $validatedData['quantity'],
                 'unit' => $unit,
-                'actor_by' => $validatedData['received_by'],
+                'actor_by' => $validatedData['received_by'] ?? auth()->user()?->name ?? 'Sistem',
                 'source_or_destination' => $validatedData['source_or_supplier'],
                 'movement_date' => $validatedData['received_date'],
                 'notes' => $validatedData['notes'] ?? null,
@@ -114,6 +114,8 @@ class MaterialService
      */
     public function recountStock(Material $material, float $actualStock, ?string $weighedBy = null, ?string $notes = null): Material
     {
+        $weighedBy = $weighedBy ?? 'Sistem';
+
         return DB::transaction(function () use ($material, $actualStock, $weighedBy, $notes) {
             $material->update([
                 'stock_quantity' => $actualStock,
@@ -128,10 +130,10 @@ class MaterialService
                 'reference_number' => $refNumber,
                 'quantity' => $actualStock,
                 'unit' => $material->unit,
-                'actor_by' => $weighedBy,
+                'actor_by' => ! empty($weighedBy) ? $weighedBy . ' (Warehouse)' : 'Warehouse',
                 'source_or_destination' => 'Timbang Ulang Stok Opname',
                 'movement_date' => now(),
-                'notes' => $notes ?? 'Hasil penimbangan opname fisik.',
+                'notes' => $notes ?: null,
             ]);
 
             self::pruneOldLogs(60);
@@ -201,7 +203,7 @@ class MaterialService
 
         return DB::transaction(function () use ($sourceMaterial, $data, $sortedQty) {
             $destinationType = $data['destination_type'];
-            $actorBy = $data['actor_by'];
+            $actorBy = $data['actor_by'] ?? 'Sistem';
             $notes = $data['notes'] ?? null;
 
             if ($destinationType === 'existing') {

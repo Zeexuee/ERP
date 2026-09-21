@@ -4,26 +4,26 @@ namespace App\Http\Controllers\Production;
 
 use App\Http\Controllers\Controller;
 use App\Models\Material;
-use App\Models\MaterialSortBatch;
-use App\Services\Production\MaterialSortService;
+use App\Models\MaterialCarveBatch;
+use App\Services\Production\MaterialCarveService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-class MaterialSortController extends Controller
+class MaterialCarveController extends Controller
 {
     /**
-     * Tampilkan riwayat proses sortir kayu mandiri.
+     * Tampilkan riwayat proses potong ukir mandiri.
      */
     public function index(Request $request): View
     {
-        $query = MaterialSortBatch::with(['sourceMaterial', 'items.targetMaterial'])
-            ->latest('sort_date')
+        $query = MaterialCarveBatch::with(['sourceMaterial', 'items.targetMaterial'])
+            ->latest('carve_date')
             ->latest('id');
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('sort_code', 'like', "%{$search}%")
+                $q->where('carve_code', 'like', "%{$search}%")
                     ->orWhere('pic_name', 'like', "%{$search}%")
                     ->orWhereHas('sourceMaterial', fn ($sq) => $sq->where('name', 'like', "%{$search}%")->orWhere('code', 'like', "%{$search}%"));
             });
@@ -32,12 +32,12 @@ class MaterialSortController extends Controller
         $ongoingBatches = (clone $query)->where('status', 'in_progress')->paginate(10, ['*'], 'ongoing_page')->withQueryString();
         $completedBatches = (clone $query)->where('status', 'completed')->paginate(15, ['*'], 'completed_page')->withQueryString();
 
-        $totalBatches = MaterialSortBatch::count();
-        $totalRawProcessed = MaterialSortBatch::sum('initial_weight');
-        $totalDriedProduced = MaterialSortBatch::sum('dried_weight');
-        $totalLoss = MaterialSortBatch::sum('drying_loss_weight');
+        $totalBatches = MaterialCarveBatch::count();
+        $totalRawProcessed = MaterialCarveBatch::sum('initial_weight');
+        $totalDriedProduced = MaterialCarveBatch::sum('dried_weight');
+        $totalLoss = MaterialCarveBatch::sum('drying_loss_weight');
 
-        return view('production.sorts.index', compact(
+        return view('production.carves.index', compact(
             'ongoingBatches',
             'completedBatches',
             'totalBatches',
@@ -48,28 +48,27 @@ class MaterialSortController extends Controller
     }
 
     /**
-     * Formulir pencatatan proses sortir mandiri baru.
+     * Formulir pencatatan proses potong ukir mandiri baru.
      */
     public function create(): View
     {
-        // Ambil semua bahan baku untuk pilihan bahan mentah dan bahan target hasil sortir
+        // Ambil semua bahan baku untuk pilihan bahan mentah dan bahan target hasil potong ukir
         $materials = Material::orderBy('name')->get();
 
-        return view('production.sorts.create', compact('materials'));
+        return view('production.carves.create', compact('materials'));
     }
 
     /**
-     * Simpan inisiasi proses sortir kayu mandiri (hanya mencatat bahan mentah asal, berat awal, & alokasi sortir).
+     * Simpan inisiasi proses potong ukir kayu mandiri.
      */
-    public function store(Request $request, MaterialSortService $service): RedirectResponse
+    public function store(Request $request, MaterialCarveService $service): RedirectResponse
     {
-        // Mendukung mode lengkap jika items disertakan (backward-compatibility)
         if ($request->has('items') && is_array($request->input('items'))) {
             $validated = $request->validate([
                 'source_material_id' => ['required', 'exists:materials,id'],
                 'initial_weight' => ['required', 'numeric', 'min:0.01'],
                 'dried_weight' => ['required', 'numeric', 'min:0.01'],
-                'sort_date' => ['required', 'date'],
+                'carve_date' => ['required', 'date'],
                 'pic_name' => ['required', 'string', 'max:100'],
                 'notes' => ['nullable', 'string', 'max:1000'],
                 'signature_data' => ['nullable', 'string'],
@@ -78,51 +77,51 @@ class MaterialSortController extends Controller
                 'items.*.result_weight' => ['required', 'numeric', 'min:0.01'],
                 'items.*.notes' => ['nullable', 'string', 'max:255'],
             ], [
-                'source_material_id.required' => 'Pilih bahan baku mentah yang akan disortir.',
+                'source_material_id.required' => 'Pilih bahan baku mentah yang akan dipotong ukir.',
                 'initial_weight.required' => 'Masukkan berat awal bahan baku.',
-                'dried_weight.required' => 'Masukkan berat hasil sortir.',
-                'items.required' => 'Masukkan minimal satu jenis bahan hasil sortir kayu tembak.',
+                'dried_weight.required' => 'Masukkan berat hasil.',
+                'items.required' => 'Masukkan minimal satu jenis bahan hasil.',
             ]);
 
             try {
-                $batch = $service->createSortBatch($validated);
+                $batch = $service->createCarveBatch($validated);
 
                 return redirect()
-                    ->route('production.sorts.show', $batch)
-                    ->with('success', "Proses sortir {$batch->sort_code} berhasil disimpan dan stok bahan tembak telah diperbarui.");
+                    ->route('production.carves.show', $batch)
+                    ->with('success', "Proses potong ukir {$batch->carve_code} berhasil disimpan.");
             } catch (\InvalidArgumentException $e) {
                 return back()
                     ->withInput()
-                    ->withErrors(['sort' => $e->getMessage()]);
+                    ->withErrors(['carve' => $e->getMessage()]);
             } catch (\Throwable $e) {
                 return back()
                     ->withInput()
-                    ->with('error', 'Gagal memproses sortir bahan: '.$e->getMessage());
+                    ->with('error', 'Gagal memproses potong ukir bahan: '.$e->getMessage());
             }
         }
 
-        // Mode Inisiasi Murni (Tanpa pembagian hasil sortir)
+        // Mode Inisiasi Murni (Tanpa pembagian hasil)
         $validated = $request->validate([
             'source_material_id' => ['required', 'exists:materials,id'],
             'initial_weight' => ['required', 'numeric', 'min:0.01'],
-            'sort_date' => ['required', 'date'],
+            'carve_date' => ['required', 'date'],
             'pic_name' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'signature_data' => ['nullable', 'string'],
         ], [
-            'source_material_id.required' => 'Pilih bahan baku mentah yang akan diinisiasi untuk sortir.',
+            'source_material_id.required' => 'Pilih bahan baku mentah yang akan diinisiasi.',
             'initial_weight.required' => 'Masukkan berat awal bahan mentah (kg).',
             'initial_weight.min' => 'Berat bahan awal harus lebih dari 0 kg.',
-            'sort_date.required' => 'Tentukan tanggal inisiasi proses sortir.',
+            'carve_date.required' => 'Tentukan tanggal inisiasi proses.',
             'pic_name.required' => 'Isi nama petugas / penanggung jawab (PIC).',
         ]);
 
         try {
-            $batch = $service->initiateSortBatch($validated);
+            $batch = $service->initiateCarveBatch($validated);
 
             return redirect()
-                ->route('production.sorts.show', $batch)
-                ->with('success', "Inisiasi proses sortir #{$batch->sort_code} berhasil dicatat. Bahan baku mentah sedang dalam proses sortir.");
+                ->route('production.carves.show', $batch)
+                ->with('success', "Inisiasi proses potong ukir #{$batch->carve_code} berhasil dicatat.");
         } catch (\InvalidArgumentException $e) {
             return back()
                 ->withInput()
@@ -130,17 +129,17 @@ class MaterialSortController extends Controller
         } catch (\Throwable $e) {
             return back()
                 ->withInput()
-                ->with('error', 'Gagal mencatat inisiasi sortir: '.$e->getMessage());
+                ->with('error', 'Gagal mencatat inisiasi: '.$e->getMessage());
         }
     }
 
     /**
-     * Tampilkan detail batch sortir dan formulir laporan jika belum selesai.
+     * Tampilkan detail batch potong ukir dan formulir laporan jika belum selesai.
      */
-    public function show(MaterialSortBatch $sortBatch): View
+    public function show(MaterialCarveBatch $carveBatch): View
     {
-        $sortBatch->load(['sourceMaterial', 'items.targetMaterial']);
-        $sourceUnit = $sortBatch->sourceMaterial?->unit;
+        $carveBatch->load(['sourceMaterial', 'items.targetMaterial']);
+        $sourceUnit = $carveBatch->sourceMaterial?->unit;
 
         $materialsQuery = Material::orderBy('category')->orderBy('name');
         if ($sourceUnit) {
@@ -149,13 +148,13 @@ class MaterialSortController extends Controller
         $materials = $materialsQuery->get();
         $categories = Material::getAllCategories();
 
-        return view('production.sorts.show', compact('sortBatch', 'materials', 'categories'));
+        return view('production.carves.show', compact('carveBatch', 'materials', 'categories'));
     }
 
     /**
-     * Simpan Laporan Hasil Sortir (Report Sorting): Hasil sortir & Pembagian bahan kayu tembak.
+     * Simpan Laporan Hasil Potong Ukir (Report Carving): Hasil & Pembagian bahan.
      */
-    public function storeReport(Request $request, MaterialSortBatch $sortBatch, MaterialSortService $service): RedirectResponse
+    public function storeReport(Request $request, MaterialCarveBatch $carveBatch, MaterialCarveService $service): RedirectResponse
     {
         $validated = $request->validate([
             'report_date' => ['required', 'date'],
@@ -166,19 +165,19 @@ class MaterialSortController extends Controller
             'items.*.result_weight' => ['required', 'numeric', 'min:0.01'],
             'items.*.notes' => ['nullable', 'string', 'max:255'],
         ], [
-            'report_date.required' => 'Pilih tanggal pelaporan hasil sortir.',
-            'report_pic_name.required' => 'Masukkan nama petugas pelapor hasil sortir.',
-            'items.required' => 'Masukkan minimal satu jenis bahan kayu tembak hasil sortir.',
-            'items.*.target_material_id.required' => 'Pilih jenis bahan hasil sortir.',
-            'items.*.result_weight.required' => 'Masukkan kuantitas hasil sortir (kg).',
+            'report_date.required' => 'Pilih tanggal pelaporan hasil potong ukir.',
+            'report_pic_name.required' => 'Masukkan nama petugas pelapor hasil potong ukir.',
+            'items.required' => 'Masukkan minimal satu jenis bahan hasil potong ukir.',
+            'items.*.target_material_id.required' => 'Pilih jenis bahan hasil potong ukir.',
+            'items.*.result_weight.required' => 'Masukkan kuantitas hasil potong ukir (kg).',
         ]);
 
         try {
-            $service->submitSortReport($sortBatch, $validated);
+            $service->submitCarveReport($carveBatch, $validated);
 
             return redirect()
-                ->route('production.sorts.show', $sortBatch)
-                ->with('success', "Laporan hasil sortir #{$sortBatch->sort_code} berhasil disimpan dan bahan siap tembak telah masuk ke stok gudang.");
+                ->route('production.carves.show', $carveBatch)
+                ->with('success', "Laporan hasil potong ukir #{$carveBatch->carve_code} berhasil disimpan dan bahan siap tembak telah masuk ke stok gudang.");
         } catch (\InvalidArgumentException $e) {
             return back()
                 ->withInput()
@@ -186,7 +185,7 @@ class MaterialSortController extends Controller
         } catch (\Throwable $e) {
             return back()
                 ->withInput()
-                ->with('error', 'Gagal memproses laporan sortir: '.$e->getMessage());
+                ->with('error', 'Gagal memproses laporan potong ukir: '.$e->getMessage());
         }
     }
 }

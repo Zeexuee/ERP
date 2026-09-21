@@ -220,7 +220,7 @@
             <!-- Brand Header & Toggle Icon -->
             <div class="brand-header-container h-16 flex items-center justify-between px-3 border-b border-slate-900/10 w-full">
                 <div class="brand-text-label">
-                    <span class="font-bold text-xs tracking-wider text-slate-500 uppercase">Beta v.0.0.1</span>
+                    <span class="font-bold text-xs tracking-wider text-slate-500 uppercase">Beta v.1.1.2</span>
                 </div>
                 <button id="toggleSidebarBtn" type="button" class="w-10 h-10 shrink-0 flex items-center justify-center rounded-xl text-slate-600 hover:text-slate-900 hover:bg-white/60 transition" title="Sidebar">
                     <svg id="toggleIcon" class="w-5 h-5 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -328,7 +328,7 @@
                         <span class="nav-text-label">Dashboard</span>
                     </a>
 
-                    <div class="nav-section-title px-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Gudang Bahan</div>
+                    <div class="nav-section-title px-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Warehouse</div>
 
                     <a href="{{ route('production.materials.index') }}" title="Barang Gudang" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.materials.index') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
                         <div class="nav-icon-box">
@@ -339,17 +339,6 @@
                         <span class="nav-text-label">Barang Gudang</span>
                     </a>
 
-                    <a href="{{ route('production.materials.create-receipt') }}" title="Input Barang Masuk" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.materials.create-receipt') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
-                            </svg>
-                        </div>
-                        <span class="nav-text-label">Barang Masuk</span>
-                    </a>
-
-                    <div class="nav-section-title px-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Manufaktur</div>
-
                     <a href="{{ route('production.sorts.index') }}" title="Proses Sortir Kayu" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.sorts.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
                         <div class="nav-icon-box">
                             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -358,6 +347,26 @@
                         </div>
                         <span class="nav-text-label">Sortir Kayu</span>
                     </a>
+
+                    <a href="{{ route('production.carves.index') }}" title="Proses Potong Ukir" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.carves.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                        <div class="nav-icon-box">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M3 21l8.5-8.5M3 3l8.5 8.5"/>
+                            </svg>
+                        </div>
+                        <span class="nav-text-label">Potong Ukir</span>
+                    </a>
+
+                    <a href="{{ route('production.melts.index') }}" title="Proses Pencairan" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.melts.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                        <div class="nav-icon-box">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                            </svg>
+                        </div>
+                        <span class="nav-text-label">Pencairan</span>
+                    </a>
+
+                    <div class="nav-section-title px-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Manufaktur</div>
 
                     <a href="{{ route('production.tembaks.index') }}" title="Proses Tembak" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.tembaks.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
                         <div class="nav-icon-box">

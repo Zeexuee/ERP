@@ -12,10 +12,6 @@ class ProductionTembakBatch extends Model
 
     protected $fillable = [
         'tembak_code',
-        'wood_material_id',
-        'wood_weight',
-        'resin_material_id',
-        'resin_weight',
         'wet_result_weight',
         'residual_resin_weight',
         'residual_resin_material_id',
@@ -32,8 +28,6 @@ class ProductionTembakBatch extends Model
     ];
 
     protected $casts = [
-        'wood_weight' => 'decimal:2',
-        'resin_weight' => 'decimal:2',
         'wet_result_weight' => 'decimal:2',
         'residual_resin_weight' => 'decimal:2',
         'dried_result_weight' => 'decimal:2',
@@ -51,14 +45,9 @@ class ProductionTembakBatch extends Model
         return $this->isCompleted() ? 'Selesai' : 'Sedang Ditembak';
     }
 
-    public function woodMaterial(): BelongsTo
+    public function materials()
     {
-        return $this->belongsTo(Material::class, 'wood_material_id');
-    }
-
-    public function resinMaterial(): BelongsTo
-    {
-        return $this->belongsTo(Material::class, 'resin_material_id');
+        return $this->hasMany(ProductionTembakMaterial::class, 'production_tembak_batch_id');
     }
 
     public function residualResinMaterial(): BelongsTo

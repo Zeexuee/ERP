@@ -8,7 +8,9 @@ use App\Http\Controllers\EcommerceController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\Production\MaterialCarveController;
 use App\Http\Controllers\Production\MaterialController;
+use App\Http\Controllers\Production\MaterialMeltController;
 use App\Http\Controllers\Production\MaterialSortController;
 use App\Http\Controllers\Production\ProductionBatchController;
 use App\Http\Controllers\Production\ProductionTembakController;
@@ -100,6 +102,22 @@ Route::middleware('auth')->group(function () {
         Route::post('sorts', [MaterialSortController::class, 'store'])->name('sorts.store');
         Route::get('sorts/{sortBatch}', [MaterialSortController::class, 'show'])->name('sorts.show')->whereNumber('sortBatch');
         Route::post('sorts/{sortBatch}/report', [MaterialSortController::class, 'storeReport'])->name('sorts.store-report')->whereNumber('sortBatch');
+
+        // Proses Potong Ukir (Bahan Mentah -> Potong Ukir -> Bahan Susut dll)
+        Route::get('carves', [MaterialCarveController::class, 'index'])->name('carves.index');
+        Route::get('carves/create', [MaterialCarveController::class, 'create'])->name('carves.create');
+        Route::post('carves', [MaterialCarveController::class, 'store'])->name('carves.store');
+        Route::get('carves/{carveBatch}', [MaterialCarveController::class, 'show'])->name('carves.show')->whereNumber('carveBatch');
+        Route::post('carves/{carveBatch}/report', [MaterialCarveController::class, 'storeReport'])->name('carves.store-report')->whereNumber('carveBatch');
+
+        // Proses Pencairan Getah (Bahan Padat -> Cairan -> Pemantauan Penguapan)
+        Route::get('melts', [MaterialMeltController::class, 'index'])->name('melts.index');
+        Route::get('melts/create', [MaterialMeltController::class, 'create'])->name('melts.create');
+        Route::post('melts', [MaterialMeltController::class, 'store'])->name('melts.store');
+        Route::get('melts/{meltBatch}', [MaterialMeltController::class, 'show'])->name('melts.show')->whereNumber('meltBatch');
+        Route::post('melts/{meltBatch}/report', [MaterialMeltController::class, 'storeReport'])->name('melts.store-report')->whereNumber('meltBatch');
+        Route::post('melts/{meltBatch}/log', [MaterialMeltController::class, 'storeLog'])->name('melts.store-log')->whereNumber('meltBatch');
+        Route::post('melts/{meltBatch}/complete', [MaterialMeltController::class, 'complete'])->name('melts.complete')->whereNumber('meltBatch');
 
         // Proses Tembak Kayu (Bahan Kayu + Resin -> Injeksi/Tembak -> Hasil Basah -> Sisa Resin Kembali -> Hasil Kering)
         Route::get('tembaks', [ProductionTembakController::class, 'index'])->name('tembaks.index');

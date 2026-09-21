@@ -10,6 +10,38 @@ class Material extends Model
 {
     use HasFactory;
 
+    /**
+     * Kategori utama standar bahan baku warehouse.
+     */
+    public const DEFAULT_CATEGORIES = [
+        'Bahan Sortir',
+        'Bahan Tembak',
+        'Getah',
+        'Metanol',
+        'Pewarna',
+    ];
+
+    /**
+     * Dapatkan seluruh daftar kategori bahan (kategori default utama + kategori custom dari database).
+     *
+     * @return array<int, string>
+     */
+    public static function getAllCategories(): array
+    {
+        $existing = static::query()
+            ->select('category')
+            ->whereNotNull('category')
+            ->distinct()
+            ->pluck('category')
+            ->filter()
+            ->toArray();
+
+        return collect(array_merge(self::DEFAULT_CATEGORIES, $existing))
+            ->unique(fn ($item) => strtolower(trim($item)))
+            ->values()
+            ->toArray();
+    }
+
     protected $fillable = [
         'code',
         'name',

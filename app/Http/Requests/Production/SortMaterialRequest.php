@@ -32,7 +32,7 @@ class SortMaterialRequest extends FormRequest
             'new_code' => ['nullable', 'string', 'max:100'],
             'new_category' => ['nullable', 'string', 'max:100'],
             'existing_material_id' => ['required_if:destination_type,existing', 'nullable', 'exists:materials,id'],
-            'actor_by' => ['required', 'string', 'max:255'],
+            'actor_by' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'signature_data' => ['nullable', 'string'],
         ];

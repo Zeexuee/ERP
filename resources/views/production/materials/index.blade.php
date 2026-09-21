@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Barang Gudang'])
+@extends('layouts.app', ['title' => 'Warehouse'])
 
 @section('content')
 <div class="space-y-6">
@@ -6,8 +6,13 @@
     <!-- Header & Action Button -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-            <h2 class="text-xl font-bold text-slate-900">Barang Gudang</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Inventaris bahan baku dan penerimaan barang masuk pabrik Gaharu Sana'i.</p>
+            <div class="flex items-center gap-2">
+                <h2 class="text-xl font-bold text-slate-900">Warehouse</h2>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-white">
+                    Barang Gudang
+                </span>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">Inventaris bahan baku, sortir kayu, dan penerimaan barang masuk pabrik Gaharu Sana'i.</p>
         </div>
         <div class="flex items-center gap-2">
             <button type="button" onclick="openNewMaterialModal()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-sm transition">
@@ -18,6 +23,8 @@
             </a>
         </div>
     </div>
+
+
 
     <!-- Summary Metrics -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -228,15 +235,15 @@
                         <tr class="hover:bg-white/40 transition">
                             <td class="py-2.5 px-3">
                                 @if($log->type === 'in')
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap inline-block">
                                         Barang Masuk
                                     </span>
                                 @elseif($log->type === 'out')
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap inline-block">
                                         Pemakaian Produksi
                                     </span>
                                 @else
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-900 text-white shadow-sm">
+                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-900 text-white shadow-sm whitespace-nowrap inline-block">
                                         Timbang Ulang
                                     </span>
                                 @endif
@@ -306,14 +313,17 @@
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Kode Bahan</label>
                     <input type="text" name="code" required placeholder="MAT-GHR-008" class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono">
                 </div>
-                <div>
+                <div class="relative overflow-visible">
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori</label>
-                    <input type="text" name="category" list="categoriesDatalist" required placeholder="Kayu Dasar / Minyak..." class="w-full px-3 py-2 rounded-xl text-xs apple-input">
-                    <datalist id="categoriesDatalist">
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat }}">
-                        @endforeach
-                    </datalist>
+                    <div class="relative">
+                        <input type="text" name="category" id="new_material_category" required autocomplete="off" placeholder="Pilih / ketik kategori..." class="w-full px-3 py-2 pr-7 rounded-xl text-xs apple-input cursor-pointer">
+                        <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <div id="newCategoryDropdown" class="hidden absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-300 shadow-2xl rounded-2xl z-50 overflow-hidden max-h-48 overflow-y-auto"></div>
                 </div>
             </div>
 
@@ -329,17 +339,17 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Stok Awal</label>
-                    <input type="number" step="0.01" name="stock_quantity" value="0" required class="w-full px-3 py-2 rounded-xl text-xs apple-input">
+                    <input type="number" step="0.01" name="stock_quantity" value="" placeholder="0.00" required class="w-full px-3 py-2 rounded-xl text-xs apple-input">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Min. Alert</label>
-                    <input type="number" step="0.01" name="minimum_stock" value="10" class="w-full px-3 py-2 rounded-xl text-xs apple-input">
+                    <input type="number" step="0.01" name="minimum_stock" value="" placeholder="0.00" class="w-full px-3 py-2 rounded-xl text-xs apple-input">
                 </div>
             </div>
 
             <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1">Estimasi Biaya / Unit (Rp)</label>
-                <input type="number" step="100" name="unit_cost" value="0" class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono">
+                <input type="number" step="100" name="unit_cost" value="" placeholder="0" class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono">
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
@@ -396,20 +406,6 @@
             </div>
 
             <div>
-                <label for="weighed_by" class="block text-xs font-semibold text-slate-800 mb-1">
-                    Nama Penimbang <span class="text-red-500">*</span>
-                </label>
-                <input 
-                    type="text" 
-                    id="weighed_by" 
-                    name="weighed_by" 
-                    required 
-                    placeholder="Nama petugas / penimbang..."
-                    class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium"
-                >
-            </div>
-
-            <div>
                 <label for="recount_notes" class="block text-xs font-semibold text-slate-800 mb-1">
                     Catatan Penimbangan / Stock Opname
                 </label>
@@ -419,6 +415,19 @@
                     rows="2" 
                     class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
                 ></textarea>
+            </div>
+
+            <div>
+                <label for="recount_pic" class="block text-xs font-semibold text-slate-800 mb-1">
+                    PIC (Penanggung Jawab)
+                </label>
+                <input 
+                    type="text" 
+                    id="recount_pic" 
+                    name="weighed_by" 
+                    placeholder="Nama penanggung jawab..."
+                    class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300"
+                >
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
@@ -457,14 +466,17 @@
                 <input type="text" id="edit_name" name="name" required class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium">
             </div>
 
-            <div>
+            <div class="relative overflow-visible">
                 <label for="edit_category" class="block text-xs font-semibold text-slate-800 mb-1">Kategori <span class="text-red-500">*</span></label>
-                <input type="text" id="edit_category" name="category" list="editCategoryDatalist" required class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium">
-                <datalist id="editCategoryDatalist">
-                    @foreach($categories as $cat)
-                        <option value="{{ $cat }}">
-                    @endforeach
-                </datalist>
+                <div class="relative">
+                    <input type="text" id="edit_category" name="category" required autocomplete="off" placeholder="Pilih / ketik kategori..." class="w-full px-3 py-2 pr-7 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium cursor-pointer">
+                    <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </div>
+                </div>
+                <div id="editCategoryDropdown" class="hidden absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-300 shadow-2xl rounded-2xl z-50 overflow-hidden max-h-48 overflow-y-auto"></div>
             </div>
 
             <div>
@@ -526,19 +538,6 @@
                             </span>
                         </div>
                     </div>
-
-                    <div>
-                        <label for="sort_actor_by" class="block text-xs font-semibold text-slate-800 mb-1">
-                            PIC <span class="text-slate-900 font-bold">*</span>
-                        </label>
-                        <input 
-                            type="text" 
-                            id="sort_actor_by" 
-                            name="actor_by" 
-                            required 
-                            class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-medium"
-                        >
-                    </div>
                 </div>
 
                 <div>
@@ -576,14 +575,17 @@
                             <label for="sort_new_code" class="block text-[11px] font-semibold text-slate-700 mb-1">Kode (Opsional)</label>
                             <input type="text" id="sort_new_code" name="new_code" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input font-mono">
                         </div>
-                        <div>
+                        <div class="relative overflow-visible">
                             <label for="sort_new_category" class="block text-[11px] font-semibold text-slate-700 mb-1">Kategori (Opsional)</label>
-                            <input type="text" id="sort_new_category" name="new_category" list="sortCategoriesDatalist" class="w-full px-3 py-1.5 rounded-xl text-xs apple-input">
-                            <datalist id="sortCategoriesDatalist">
-                                @foreach($categories as $cat)
-                                    <option value="{{ $cat }}">
-                                @endforeach
-                            </datalist>
+                            <div class="relative">
+                                <input type="text" id="sort_new_category" name="new_category" autocomplete="off" placeholder="Pilih / ketik kategori..." class="w-full px-3 py-1.5 pr-7 rounded-xl text-xs apple-input cursor-pointer">
+                                <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div id="sortCategoryDropdown" class="hidden absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-300 shadow-2xl rounded-2xl z-50 overflow-hidden max-h-44 overflow-y-auto"></div>
                         </div>
                     </div>
                     <p class="text-[10px] text-slate-500">
@@ -617,21 +619,6 @@
                         <p class="font-bold">Satuan tidak dapat digabungkan</p>
                         <p id="unitMismatchText" class="mt-0.5 text-[11px] font-normal text-slate-700"></p>
                     </div>
-                </div>
-
-                <div>
-                    <div class="flex items-center justify-between mb-1">
-                        <label class="block text-xs font-semibold text-slate-800">
-                            Tanda Tangan
-                        </label>
-                        <button type="button" onclick="clearSortSignature()" class="text-[10px] text-slate-500 hover:text-slate-800 underline">
-                            Hapus
-                        </button>
-                    </div>
-                    <div class="border border-slate-300 rounded-xl overflow-hidden bg-white">
-                        <canvas id="sortSignatureCanvas" width="450" height="95" class="w-full h-24 touch-none cursor-crosshair block bg-white"></canvas>
-                    </div>
-                    <input type="hidden" name="signature_data" id="sort_signature_data">
                 </div>
 
                 <div>
@@ -889,5 +876,98 @@
     function closeEditModal() {
         document.getElementById('editMaterialModal').classList.add('hidden');
     }
+
+    // Searchable Combobox with Register On-the-Fly for Categories (Rule 7.1)
+    function setupCategoryCombobox(inputId, dropdownId, initialCategories) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
+        if (!input || !dropdown) return;
+
+        let categories = Array.isArray(initialCategories) ? [...initialCategories] : [];
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text || '';
+            return div.innerHTML;
+        }
+
+        function render(query = '') {
+            const q = (query || '').trim();
+            const qLower = q.toLowerCase();
+
+            dropdown.innerHTML = '';
+
+            // 1. Opsi Registrasi On-the-Fly di URUTAN PERTAMA / PALING ATAS (Rule 7.1)
+            const topItem = document.createElement('div');
+            topItem.className = 'px-3.5 py-2.5 bg-slate-900 text-white hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800 transition select-none';
+            if (q.length > 0) {
+                topItem.innerHTML = `
+                    <span class="text-xs font-bold">+ Tambahkan "<strong>${escapeHtml(q)}</strong>"</span>
+                    <span class="text-[10px] font-semibold opacity-80 uppercase tracking-wider">Register On-the-Fly</span>
+                `;
+                topItem.onmousedown = (e) => {
+                    e.preventDefault();
+                    selectCat(q);
+                };
+            } else {
+                topItem.innerHTML = `
+                    <span class="text-xs font-bold">+ Tambah Kategori Baru...</span>
+                    <span class="text-[10px] font-semibold opacity-80 uppercase tracking-wider">Ketik Nama</span>
+                `;
+                topItem.onmousedown = (e) => {
+                    e.preventDefault();
+                    input.focus();
+                };
+            }
+            dropdown.appendChild(topItem);
+
+            // 2. Daftar Pilihan Kategori
+            const matches = categories.filter(c => !qLower || c.toLowerCase().includes(qLower));
+
+            if (matches.length > 0) {
+                matches.forEach(c => {
+                    const item = document.createElement('div');
+                    const isSelected = input.value && input.value.trim().toLowerCase() === c.toLowerCase();
+                    item.className = `px-3.5 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between border-b border-slate-100 last:border-0 transition select-none ${isSelected ? 'bg-slate-50 font-bold text-slate-900' : 'text-slate-700 text-xs'}`;
+                    item.innerHTML = `
+                        <span class="text-xs">${escapeHtml(c)}</span>
+                        ${isSelected ? '<span class="text-[10px] font-semibold text-slate-500">Terpilih</span>' : ''}
+                    `;
+                    item.onmousedown = (e) => {
+                        e.preventDefault();
+                        selectCat(c);
+                    };
+                    dropdown.appendChild(item);
+                });
+            } else if (q.length > 0) {
+                const noMatch = document.createElement('div');
+                noMatch.className = 'px-3.5 py-2 text-[11px] text-slate-400 italic';
+                noMatch.innerText = 'Kategori belum terdaftar. Klik opsi di atas untuk mendaftarkannya.';
+                dropdown.appendChild(noMatch);
+            }
+
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectCat(catName) {
+            input.value = catName;
+            if (!categories.some(c => c.toLowerCase() === catName.toLowerCase())) {
+                categories.push(catName);
+            }
+            dropdown.classList.add('hidden');
+        }
+
+        input.addEventListener('focus', () => render(input.value));
+        input.addEventListener('input', () => render(input.value));
+        input.addEventListener('click', () => render(input.value));
+        input.addEventListener('blur', () => {
+            setTimeout(() => dropdown.classList.add('hidden'), 200);
+        });
+    }
+
+    const availableCategories = @json($categories);
+    setupCategoryCombobox('new_material_category', 'newCategoryDropdown', availableCategories);
+    setupCategoryCombobox('edit_category', 'editCategoryDropdown', availableCategories);
+    setupCategoryCombobox('sort_new_category', 'sortCategoryDropdown', availableCategories);
 </script>
 @endsection

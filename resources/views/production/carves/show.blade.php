@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Rincian Sortir #' . $sortBatch->sort_code])
+@extends('layouts.app', ['title' => 'Rincian Potong Ukir #' . $carveBatch->carve_code])
 
 @section('content')
 <div class="max-w-4xl mx-auto space-y-6">
@@ -6,33 +6,33 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <div class="flex items-center gap-2">
-                <h2 class="text-xl font-bold text-slate-900">Rincian Sortir #{{ $sortBatch->sort_code }}</h2>
+                <h2 class="text-xl font-bold text-slate-900">Rincian Potong Ukir #{{ $carveBatch->carve_code }}</h2>
                 <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
                     Warehouse
                 </span>
-                @if($sortBatch->isCompleted())
+                @if($carveBatch->isCompleted())
                     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-white">
                         Selesai
                     </span>
                 @else
                     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300">
-                        Sedang Disortir
+                        Sedang Dipotong ukir
                     </span>
                 @endif
             </div>
             <p class="text-xs text-slate-600 mt-1">
-                Inisiasi: {{ $sortBatch->sort_date->format('d/m/Y') }}
-                @if($sortBatch->isCompleted() && $sortBatch->report_date)
-                    • Selesai: {{ $sortBatch->report_date->format('d/m/Y') }}
+                Inisiasi: {{ $carveBatch->carve_date->format('d/m/Y') }}
+                @if($carveBatch->isCompleted() && $carveBatch->report_date)
+                    • Selesai: {{ $carveBatch->report_date->format('d/m/Y') }}
                 @endif
             </p>
         </div>
 
         <div class="flex items-center gap-2">
-            <a href="{{ route('production.sorts.index') }}" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-xs transition">
+            <a href="{{ route('production.carves.index') }}" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-xs transition">
                 Kembali
             </a>
-            <a href="{{ route('production.sorts.create') }}" class="px-3.5 py-2 rounded-xl btn-dark text-xs font-semibold shadow-xs transition">
+            <a href="{{ route('production.carves.create') }}" class="px-3.5 py-2 rounded-xl btn-dark text-xs font-semibold shadow-xs transition">
                 Inisiasi Baru
             </a>
         </div>
@@ -52,10 +52,10 @@
         <div class="p-5 rounded-2xl apple-glass-card">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Bahan Mentah Asal</span>
             <div class="text-sm font-bold text-slate-900 mt-1">
-                {{ $sortBatch->sourceMaterial->name ?? '-' }}
+                {{ $carveBatch->sourceMaterial->name ?? '-' }}
             </div>
             <span class="text-xs font-mono text-slate-600 block mt-0.5">
-                Berat Awal: {{ number_format($sortBatch->initial_weight, 1) }} kg
+                Berat Awal: {{ number_format($carveBatch->initial_weight, 1) }} kg
             </span>
         </div>
 
@@ -63,8 +63,8 @@
         <div class="p-5 rounded-2xl apple-glass-card">
             <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Status</span>
             <div class="text-xl font-bold font-mono text-slate-900 mt-1">
-                @if($sortBatch->isCompleted())
-                    {{ $sortBatch->items->count() }} Grade
+                @if($carveBatch->isCompleted())
+                    {{ $carveBatch->items->count() }} Grade
                 @else
                     Menunggu Laporan
                 @endif
@@ -72,30 +72,30 @@
         </div>
     </div>
 
-    @if(! $sortBatch->isCompleted())
+    @if(! $carveBatch->isCompleted())
         <!-- FORM LAPORAN HASIL SORTIR -->
         <div class="apple-glass-panel rounded-3xl p-6 shadow-md space-y-6">
             <div class="border-b border-slate-900/10 pb-3">
                 <div class="flex items-center gap-2">
                     <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-900 text-white">Tahap 2</span>
                     <h3 class="text-base font-bold text-slate-900">
-                        Laporan Hasil Sortir
+                        Laporan Hasil Potong Ukir
                     </h3>
                 </div>
             </div>
 
-            <form action="{{ route('production.sorts.store-report', $sortBatch) }}" method="POST" id="reportSortForm" class="space-y-6">
+            <form action="{{ route('production.carves.store-report', $carveBatch) }}" method="POST" id="reportCarveForm" class="space-y-6">
                 @csrf
 
 
                 <div class="space-y-4">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-900/10 pb-2">
                         <h4 class="text-xs font-bold uppercase tracking-wider text-slate-700">
-                            Pembagian Hasil Sortir
+                            Pembagian Hasil Potong Ukir
                         </h4>
 
                         <div id="balanceBadge" class="px-3 py-1 rounded-xl text-xs font-bold font-mono border transition inline-block bg-slate-100 text-slate-800 border-slate-300">
-                            Total Sortir: 0.00 / {{ number_format($sortBatch->initial_weight, 2) }} {{ $sortBatch->sourceMaterial->unit ?? 'kg' }}
+                            Total Potong Ukir: 0.00 / {{ number_format($carveBatch->initial_weight, 2) }} {{ $carveBatch->sourceMaterial->unit ?? 'kg' }}
                         </div>
                     </div>
 
@@ -104,12 +104,12 @@
                             <thead>
                                 <tr class="border-b border-slate-200 text-slate-500 font-extrabold uppercase text-[10px]">
                                     <th class="py-2 px-2 w-1/2">Jenis Bahan (Pilih / Ketik Baru)</th>
-                                    <th class="py-2 px-2 w-1/4">Hasil Timbang ({{ $sortBatch->sourceMaterial->unit ?? 'kg' }})</th>
+                                    <th class="py-2 px-2 w-1/4">Hasil Timbang ({{ $carveBatch->sourceMaterial->unit ?? 'kg' }})</th>
                                     <th class="py-2 px-2">Catatan</th>
                                     <th class="py-2 px-2 text-center w-12">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody id="sortItemsBody" class="divide-y divide-slate-100 overflow-visible">
+                            <tbody id="carveItemsBody" class="divide-y divide-slate-100 overflow-visible">
                             </tbody>
                         </table>
                     </div>
@@ -122,7 +122,7 @@
                         </div>
 
                         <div class="text-xs text-slate-600 font-mono">
-                            Total Terbagi: <strong id="totalAllocatedText" class="text-slate-900 font-bold">0.00 {{ $sortBatch->sourceMaterial->unit ?? 'kg' }}</strong>
+                            Total Terbagi: <strong id="totalAllocatedText" class="text-slate-900 font-bold">0.00 {{ $carveBatch->sourceMaterial->unit ?? 'kg' }}</strong>
                         </div>
                     </div>
                 </div>
@@ -170,7 +170,7 @@
                 
                 <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-900/10">
                     <button type="submit" id="submitReportBtn" class="px-6 py-2.5 rounded-xl btn-dark text-xs font-bold shadow-md transition">
-                        Simpan Laporan Sortir
+                        Simpan Laporan Potong Ukir
                     </button>
                 </div>
             </form>
@@ -179,7 +179,7 @@
         <!-- TABEL RINCIAN HASIL SORTIR -->
         <div class="apple-glass-panel rounded-3xl p-6 shadow-md space-y-4">
             <h3 class="text-sm font-bold text-slate-900 border-b border-slate-900/10 pb-2">
-                Rincian Pembagian Hasil Sortir
+                Rincian Pembagian Hasil Potong Ukir
             </h3>
 
             <div class="overflow-x-auto">
@@ -195,10 +195,10 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @php $totalHasil = 0; @endphp
-                        @foreach($sortBatch->items as $item)
+                        @foreach($carveBatch->items as $item)
                             @php 
                                 $totalHasil += $item->result_weight;
-                                $porsi = $sortBatch->initial_weight > 0 ? round(($item->result_weight / $sortBatch->initial_weight) * 100, 1) : 0;
+                                $porsi = $carveBatch->initial_weight > 0 ? round(($item->result_weight / $carveBatch->initial_weight) * 100, 1) : 0;
                             @endphp
                             <tr class="hover:bg-white/50 transition">
                                 <td class="py-3 px-3 font-mono font-bold text-slate-600">
@@ -220,10 +220,10 @@
                         @endforeach
                     </tbody>
                     <tfoot>
-                        @if($sortBatch->initial_weight > $totalHasil)
+                        @if($carveBatch->initial_weight > $totalHasil)
                             @php 
-                                $susutWeight = $sortBatch->initial_weight - $totalHasil;
-                                $susutPersen = $sortBatch->initial_weight > 0 ? round(($susutWeight / $sortBatch->initial_weight) * 100, 1) : 0;
+                                $susutWeight = $carveBatch->initial_weight - $totalHasil;
+                                $susutPersen = $carveBatch->initial_weight > 0 ? round(($susutWeight / $carveBatch->initial_weight) * 100, 1) : 0;
                             @endphp
                             <tr class="border-t-2 border-slate-900/10 font-bold bg-slate-50/50 text-slate-600">
                                 <td colspan="2" class="py-3 px-3 text-right uppercase text-[10px] tracking-wider">
@@ -249,7 +249,7 @@
             <div class="apple-glass-panel rounded-3xl p-6 shadow-md space-y-2">
                 <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Catatan</span>
                 <p class="text-xs text-slate-700 leading-relaxed pt-1">
-                    {{ $sortBatch->notes ?: '-' }}
+                    {{ $carveBatch->notes ?: '-' }}
                 </p>
 
             </div>
@@ -260,7 +260,7 @@
 
 </div>
 
-@if(! $sortBatch->isCompleted())
+@if(! $carveBatch->isCompleted())
 <!-- ALERT MODALS -->
 <div id="shortageWarningModal" class="fixed inset-0 z-[100] hidden overflow-y-auto bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4" onclick="closeShortageModal()">
     <div class="apple-glass-panel bg-white w-full max-w-sm rounded-3xl p-6 shadow-2xl border border-slate-300 relative" onclick="event.stopPropagation()">
@@ -307,7 +307,7 @@
             <button type="button" onclick="closeInvalidMaterialModal()" class="text-slate-400 hover:text-slate-700 font-bold text-sm p-1">✕</button>
         </div>
         <div class="mt-4">
-            <p class="text-xs text-slate-700 mb-6 font-medium leading-relaxed">Silakan pilih atau daftarkan bahan baku yang valid untuk setiap baris hasil sortir sebelum menyimpan laporan.</p>
+            <p class="text-xs text-slate-700 mb-6 font-medium leading-relaxed">Silakan pilih atau daftarkan bahan baku yang valid untuk setiap baris hasil potong ukir sebelum menyimpan laporan.</p>
             <button type="button" onclick="closeInvalidMaterialModal()" class="w-full py-2.5 rounded-xl btn-dark text-xs font-bold shadow-xs transition">Mengerti</button>
         </div>
     </div>
@@ -386,13 +386,13 @@
 
 <script>
     const materialsList = @json($materials);
-    const initialWeight = {{ (float) $sortBatch->initial_weight }};
-    const sourceUnit = "{{ strtolower($sortBatch->sourceMaterial->unit ?? 'kg') }}";
-    const sourceUnitCost = {{ (float) ($sortBatch->sourceMaterial->unit_cost ?? 0) }};
+    const initialWeight = {{ (float) $carveBatch->initial_weight }};
+    const sourceUnit = "{{ strtolower($carveBatch->sourceMaterial->unit ?? 'kg') }}";
+    const sourceUnitCost = {{ (float) ($carveBatch->sourceMaterial->unit_cost ?? 0) }};
 
     const balanceBadge = document.getElementById('balanceBadge');
     const totalAllocatedText = document.getElementById('totalAllocatedText');
-    const sortItemsBody = document.getElementById('sortItemsBody');
+    const carveItemsBody = document.getElementById('carveItemsBody');
 
     let rowCount = 0;
     let activeRowForModal = null;
@@ -634,7 +634,7 @@
 
     function selectMaterial(row, m) {
         if (m.unit && sourceUnit && m.unit.toLowerCase() !== sourceUnit.toLowerCase()) {
-            alert(`Satuan bahan [${m.code}] ${m.name} (${m.unit}) berbeda dengan satuan bahan baku asal (${sourceUnit}). Pembagian hasil sortir harus menggunakan satuan yang sama.`);
+            alert(`Satuan bahan [${m.code}] ${m.name} (${m.unit}) berbeda dengan satuan bahan baku asal (${sourceUnit}). Pembagian hasil potong ukir harus menggunakan satuan yang sama.`);
             return;
         }
 
@@ -667,7 +667,7 @@
             },
             body: JSON.stringify({
                 name: name,
-                category: 'Kayu Tembak',
+                category: 'Bahan Susut',
                 unit: sourceUnit,
                 stock_quantity: 0,
                 minimum_stock: 0,
@@ -761,7 +761,7 @@
             </td>
         `;
 
-        sortItemsBody.appendChild(tr);
+        carveItemsBody.appendChild(tr);
         bindMaterialCombobox(tr);
         recalculateBalance();
     }
@@ -863,7 +863,7 @@
         document.getElementById('reportSignatureInput').value = '';
     }
 
-    document.getElementById('reportSortForm').addEventListener('submit', function (e) {
+    document.getElementById('reportCarveForm').addEventListener('submit', function (e) {
         let hasInvalidMaterial = false;
         let firstInvalidInput = null;
         let totalAllocated = 0;
@@ -929,7 +929,7 @@
 
     function confirmShortageAndSubmit() {
         document.getElementById('shortageWarningModal').classList.add('hidden');
-        HTMLFormElement.prototype.submit.call(document.getElementById('reportSortForm'));
+        HTMLFormElement.prototype.submit.call(document.getElementById('reportCarveForm'));
     }
 
     function closeInvalidMaterialModal() {
@@ -1009,8 +1009,8 @@
     }
 
     @php
-        $defaultSortCategories = ['Bahan Tembak', 'Bahan Suling', 'Bahan Ukir Potong'];
-        $mergedCategories = array_unique(array_merge($defaultSortCategories, $categories ?? \App\Models\Material::DEFAULT_CATEGORIES));
+        $defaultCarveCategories = ['Bahan Susut'];
+        $mergedCategories = array_unique(array_merge($defaultCarveCategories, $categories ?? \App\Models\Material::DEFAULT_CATEGORIES));
     @endphp
     setupCategoryCombobox('quickMaterialCategory', 'quickCategoryDropdown', @json(array_values($mergedCategories)));
 </script>

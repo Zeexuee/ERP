@@ -15,7 +15,7 @@ class RecountMaterialRequest extends FormRequest
     {
         return [
             'actual_stock' => ['required', 'numeric', 'min:0'],
-            'weighed_by' => ['required', 'string', 'max:255'],
+            'weighed_by' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:500'],
         ];
     }

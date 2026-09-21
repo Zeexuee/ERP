@@ -17,30 +17,35 @@ class ProductionTembakService
     public function initiateTembakBatch(array $data): ProductionTembakBatch
     {
         return DB::transaction(function () use ($data) {
-            $woodMaterial = Material::findOrFail($data['wood_material_id']);
-            $woodWeight = (float) $data['wood_weight'];
-
-            $resinMaterial = Material::findOrFail($data['resin_material_id']);
-            $resinWeight = (float) $data['resin_weight'];
-
-            if ($woodWeight <= 0) {
-                throw new InvalidArgumentException('Berat kayu awal harus lebih besar dari 0.');
+            // Validasi Stok Kayu & Resin terlebih dahulu
+            $woods = [];
+            foreach ($data['woods'] as $wood) {
+                $material = Material::findOrFail($wood['material_id']);
+                $weight = (float) $wood['weight'];
+                if ($weight <= 0) {
+                    throw new InvalidArgumentException('Berat kayu awal harus lebih besar dari 0.');
+                }
+                if ($material->stock_quantity < $weight) {
+                    throw new InvalidArgumentException(
+                        "Stok kayu {$material->name} tidak mencukupi (Tersedia: {$material->stock_quantity} {$material->unit}, Dibutuhkan: {$weight} {$material->unit})."
+                    );
+                }
+                $woods[] = ['model' => $material, 'weight' => $weight];
             }
 
-            if ($woodMaterial->stock_quantity < $woodWeight) {
-                throw new InvalidArgumentException(
-                    "Stok kayu {$woodMaterial->name} tidak mencukupi (Tersedia: {$woodMaterial->stock_quantity} {$woodMaterial->unit}, Dibutuhkan: {$woodWeight} {$woodMaterial->unit})."
-                );
-            }
-
-            if ($resinWeight <= 0) {
-                throw new InvalidArgumentException('Kuantitas minyak/resin harus lebih besar dari 0.');
-            }
-
-            if ($resinMaterial->stock_quantity < $resinWeight) {
-                throw new InvalidArgumentException(
-                    "Stok resin {$resinMaterial->name} tidak mencukupi (Tersedia: {$resinMaterial->stock_quantity} {$resinMaterial->unit}, Dibutuhkan: {$resinWeight} {$resinMaterial->unit})."
-                );
+            $resins = [];
+            foreach ($data['resins'] as $resin) {
+                $material = Material::findOrFail($resin['material_id']);
+                $weight = (float) $resin['weight'];
+                if ($weight <= 0) {
+                    throw new InvalidArgumentException('Kuantitas minyak/resin harus lebih besar dari 0.');
+                }
+                if ($material->stock_quantity < $weight) {
+                    throw new InvalidArgumentException(
+                        "Stok resin {$material->name} tidak mencukupi (Tersedia: {$material->stock_quantity} {$material->unit}, Dibutuhkan: {$weight} {$material->unit})."
+                    );
+                }
+                $resins[] = ['model' => $material, 'weight' => $weight];
             }
 
             // Simpan tanda tangan digital jika ada
@@ -50,56 +55,12 @@ class ProductionTembakService
             $latest = ProductionTembakBatch::latest('id')->first();
             $tembakCode = 'TBK-'.date('Ym').'-'.str_pad(($latest ? $latest->id + 1 : 1), 4, '0', STR_PAD_LEFT);
 
-            // Potong stok kayu di gudang & catat log
-            $woodMaterial->decrement('stock_quantity', $woodWeight);
-            $woodMaterial->update([
-                'last_weighed_at' => now(),
-                'last_weighed_by' => $data['pic_name'],
-            ]);
-
-            MaterialLog::create([
-                'material_id' => $woodMaterial->id,
-                'type' => 'out',
-                'reference_number' => $tembakCode,
-                'quantity' => $woodWeight,
-                'unit' => $woodMaterial->unit,
-                'actor_by' => $data['pic_name'],
-                'source_or_destination' => "Inisiasi Tembak #{$tembakCode}",
-                'movement_date' => $data['tembak_date'] ?? now(),
-                'notes' => $data['notes'] ?? "Pengeluaran bahan kayu ({$woodMaterial->name}) untuk proses tembak.",
-                'signature_path' => $signaturePath,
-            ]);
-
-            // Potong stok resin di gudang & catat log
-            $resinMaterial->decrement('stock_quantity', $resinWeight);
-            $resinMaterial->update([
-                'last_weighed_at' => now(),
-                'last_weighed_by' => $data['pic_name'],
-            ]);
-
-            MaterialLog::create([
-                'material_id' => $resinMaterial->id,
-                'type' => 'out',
-                'reference_number' => $tembakCode,
-                'quantity' => $resinWeight,
-                'unit' => $resinMaterial->unit,
-                'actor_by' => $data['pic_name'],
-                'source_or_destination' => "Inisiasi Tembak #{$tembakCode}",
-                'movement_date' => $data['tembak_date'] ?? now(),
-                'notes' => $data['notes'] ?? "Pengeluaran minyak/resin ({$resinMaterial->name}) untuk proses tembak.",
-                'signature_path' => $signaturePath,
-            ]);
-
             // Buat record batch tembak status in_progress
-            return ProductionTembakBatch::create([
+            $batch = ProductionTembakBatch::create([
                 'tembak_code' => $tembakCode,
-                'wood_material_id' => $woodMaterial->id,
-                'wood_weight' => $woodWeight,
-                'resin_material_id' => $resinMaterial->id,
-                'resin_weight' => $resinWeight,
                 'wet_result_weight' => null,
                 'residual_resin_weight' => null,
-                'residual_resin_material_id' => $resinMaterial->id,
+                'residual_resin_material_id' => null,
                 'dried_result_weight' => null,
                 'output_material_id' => null,
                 'status' => 'in_progress',
@@ -111,6 +72,72 @@ class ProductionTembakService
                 'report_notes' => null,
                 'signature_path' => $signaturePath,
             ]);
+
+            // Proses potongan stok kayu & insert tabel pivot
+            foreach ($woods as $woodData) {
+                $woodMaterial = $woodData['model'];
+                $woodWeight = $woodData['weight'];
+
+                $woodMaterial->decrement('stock_quantity', $woodWeight);
+                $woodMaterial->update([
+                    'last_weighed_at' => now(),
+                    'last_weighed_by' => $data['pic_name'],
+                ]);
+
+                MaterialLog::create([
+                    'material_id' => $woodMaterial->id,
+                    'type' => 'out',
+                    'reference_number' => $tembakCode,
+                    'quantity' => $woodWeight,
+                    'unit' => $woodMaterial->unit,
+                    'actor_by' => $data['pic_name'],
+                    'source_or_destination' => "Inisiasi Tembak #{$tembakCode}",
+                    'movement_date' => $data['tembak_date'] ?? now(),
+                    'notes' => $data['notes'] ?? "Pengeluaran bahan kayu ({$woodMaterial->name}) untuk proses tembak.",
+                    'signature_path' => $signaturePath,
+                ]);
+
+                $batch->materials()->create([
+                    'material_id' => $woodMaterial->id,
+                    'type' => 'wood',
+                    'weight' => $woodWeight,
+                    'unit_cost' => $woodMaterial->unit_cost,
+                ]);
+            }
+
+            // Proses potongan stok resin & insert tabel pivot
+            foreach ($resins as $resinData) {
+                $resinMaterial = $resinData['model'];
+                $resinWeight = $resinData['weight'];
+
+                $resinMaterial->decrement('stock_quantity', $resinWeight);
+                $resinMaterial->update([
+                    'last_weighed_at' => now(),
+                    'last_weighed_by' => $data['pic_name'],
+                ]);
+
+                MaterialLog::create([
+                    'material_id' => $resinMaterial->id,
+                    'type' => 'out',
+                    'reference_number' => $tembakCode,
+                    'quantity' => $resinWeight,
+                    'unit' => $resinMaterial->unit,
+                    'actor_by' => $data['pic_name'],
+                    'source_or_destination' => "Inisiasi Tembak #{$tembakCode}",
+                    'movement_date' => $data['tembak_date'] ?? now(),
+                    'notes' => $data['notes'] ?? "Pengeluaran minyak/resin ({$resinMaterial->name}) untuk proses tembak.",
+                    'signature_path' => $signaturePath,
+                ]);
+
+                $batch->materials()->create([
+                    'material_id' => $resinMaterial->id,
+                    'type' => 'resin',
+                    'weight' => $resinWeight,
+                    'unit_cost' => $resinMaterial->unit_cost,
+                ]);
+            }
+
+            return $batch;
         });
     }
 
@@ -140,15 +167,19 @@ class ProductionTembakService
                 throw new InvalidArgumentException('Getah sisa tembak tidak boleh bernilai negatif.');
             }
 
-            if ($residualResinWeight > (float) $batch->resin_weight) {
-                throw new InvalidArgumentException("Getah sisa tembak ({$residualResinWeight} kg) tidak boleh melebihi resin awal yang digunakan ({$batch->resin_weight} kg).");
+            $totalResinWeight = $batch->materials()->where('type', 'resin')->sum('weight');
+
+            if ($residualResinWeight > (float) $totalResinWeight) {
+                throw new InvalidArgumentException("Getah sisa tembak ({$residualResinWeight} kg) tidak boleh melebihi total resin awal yang digunakan ({$totalResinWeight} kg).");
             }
 
             // Simpan tanda tangan laporan jika ada
             $reportSignaturePath = $this->saveSignature($data['signature_data'] ?? null, 'sig_tbk_rep');
 
             // 1. Pengembalian Getah Sisa ke Stok Gudang jika ada
-            $residualResinMatId = $data['residual_resin_material_id'] ?? $batch->residual_resin_material_id ?? $batch->resin_material_id;
+            // Ambil dari input, jika null maka gunakan material id resin pertama (sebagai default) atau yang ada di input
+            $defaultResinMatId = $batch->materials()->where('type', 'resin')->first()->material_id ?? null;
+            $residualResinMatId = $data['residual_resin_material_id'] ?? $defaultResinMatId;
             if ($residualResinWeight > 0 && $residualResinMatId) {
                 $resinMat = Material::findOrFail($residualResinMatId);
                 $resinMat->increment('stock_quantity', $residualResinWeight);

@@ -29,9 +29,14 @@ class ManufacturingPipelineTest extends TestCase
     {
         $response = $this->actingAs($this->productionUser)->get(route('production.sorts.index'));
         $response->assertOk();
+        $response->assertSee('Warehouse');
+        $response->assertSee('Sortir Kayu');
+        $response->assertSee('Barang Gudang');
+        $response->assertSee('Barang Masuk');
 
         $createResponse = $this->actingAs($this->productionUser)->get(route('production.sorts.create'));
         $createResponse->assertOk();
+        $createResponse->assertSee('Warehouse');
     }
 
     public function test_can_process_independent_wood_sorting_workflow(): void

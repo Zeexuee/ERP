@@ -23,7 +23,7 @@ class StoreMaterialReceiptRequest extends FormRequest
             'unit_cost' => ['nullable', 'numeric', 'min:0'],
             'source_or_supplier' => ['required', 'string', 'max:255'],
             'received_date' => ['required', 'date'],
-            'received_by' => ['required', 'string', 'max:255'],
+            'received_by' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'signature_data' => ['nullable', 'string'],
             'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:5120'],

@@ -3,19 +3,19 @@
 namespace App\Services\Production;
 
 use App\Models\Material;
+use App\Models\MaterialCarveBatch;
+use App\Models\MaterialCarveItem;
 use App\Models\MaterialLog;
-use App\Models\MaterialSortBatch;
-use App\Models\MaterialSortItem;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
-class MaterialSortService
+class MaterialCarveService
 {
     /**
-     * Inisiasi proses sortir kayu mandiri (Potong stok bahan mentah asal, catat log, & buat batch status in_progress).
+     * Inisiasi proses potong ukir mandiri (Potong stok bahan mentah asal, catat log, & buat batch status in_progress).
      */
-    public function initiateSortBatch(array $data): MaterialSortBatch
+    public function initiateCarveBatch(array $data): MaterialCarveBatch
     {
         return DB::transaction(function () use ($data) {
             $sourceMaterial = Material::findOrFail($data['source_material_id']);
@@ -34,9 +34,9 @@ class MaterialSortService
             // Simpan Tanda Tangan jika ada
             $signaturePath = $this->saveSignature($data['signature_data'] ?? null, 'sig_init');
 
-            // Generate Kode Sortir SRT-YYYYMM-XXXX
-            $latest = MaterialSortBatch::latest('id')->first();
-            $sortCode = 'SRT-'.date('Ym').'-'.str_pad(($latest ? $latest->id + 1 : 1), 4, '0', STR_PAD_LEFT);
+            // Generate Kode Potong Ukir CRV-YYYYMM-XXXX
+            $latest = MaterialCarveBatch::latest('id')->first();
+            $carveCode = 'CRV-'.date('Ym').'-'.str_pad(($latest ? $latest->id + 1 : 1), 4, '0', STR_PAD_LEFT);
 
             // Kurangi stok bahan mentah asal di gudang
             $sourceMaterial->decrement('stock_quantity', $initialWeight);
@@ -49,25 +49,25 @@ class MaterialSortService
             MaterialLog::create([
                 'material_id' => $sourceMaterial->id,
                 'type' => 'out',
-                'reference_number' => $sortCode,
+                'reference_number' => $carveCode,
                 'quantity' => $initialWeight,
                 'unit' => $sourceMaterial->unit,
                 'actor_by' => $data['pic_name'] ?? 'Sistem',
-                'source_or_destination' => 'Inisiasi Sortir Kayu',
-                'movement_date' => $data['sort_date'] ?? now(),
-                'notes' => $data['notes'] ?? 'Pengeluaran bahan baku mentah untuk proses sortir kayu.',
+                'source_or_destination' => 'Inisiasi Potong Ukir',
+                'movement_date' => $data['carve_date'] ?? now(),
+                'notes' => $data['notes'] ?? 'Pengeluaran bahan baku mentah untuk proses potong ukir.',
                 'signature_path' => $signaturePath,
             ]);
 
-            // Buat record batch sortir (status in_progress)
-            return MaterialSortBatch::create([
-                'sort_code' => $sortCode,
+            // Buat record batch potong ukir (status in_progress)
+            return MaterialCarveBatch::create([
+                'carve_code' => $carveCode,
                 'status' => 'in_progress',
                 'source_material_id' => $sourceMaterial->id,
                 'initial_weight' => $initialWeight,
                 'dried_weight' => null,
                 'drying_loss_weight' => 0,
-                'sort_date' => $data['sort_date'] ?? now(),
+                'carve_date' => $data['carve_date'] ?? now(),
                 'pic_name' => $data['pic_name'] ?? 'Sistem',
                 'notes' => $data['notes'] ?? null,
                 'signature_path' => $signaturePath,
@@ -76,19 +76,19 @@ class MaterialSortService
     }
 
     /**
-     * Catat laporan hasil sortir (Report Sorting): input berat kering, susut, pembagian item, dan tambahkan ke stok gudang.
+     * Catat laporan hasil potong ukir (Report Carving): input berat kering, susut, pembagian item, dan tambahkan ke stok gudang.
      */
-    public function submitSortReport(MaterialSortBatch $sortBatch, array $data): MaterialSortBatch
+    public function submitCarveReport(MaterialCarveBatch $carveBatch, array $data): MaterialCarveBatch
     {
-        return DB::transaction(function () use ($sortBatch, $data) {
-            if ($sortBatch->isCompleted()) {
-                throw new InvalidArgumentException("Batch sortir {$sortBatch->sort_code} sudah pernah diselesaikan dan dilaporkan.");
+        return DB::transaction(function () use ($carveBatch, $data) {
+            if ($carveBatch->isCompleted()) {
+                throw new InvalidArgumentException("Batch potong ukir {$carveBatch->carve_code} sudah pernah diselesaikan dan dilaporkan.");
             }
 
-            // Validasi item hasil sortir
+            // Validasi item hasil potong ukir
             $items = $data['items'] ?? [];
             if (empty($items)) {
-                throw new InvalidArgumentException('Minimal harus ada 1 jenis hasil sortir bahan kayu tembak.');
+                throw new InvalidArgumentException('Minimal harus ada 1 jenis hasil bahan dari potong ukir.');
             }
 
             $totalResultWeight = 0;
@@ -97,14 +97,14 @@ class MaterialSortService
             }
 
             $driedWeight = $totalResultWeight;
-            $initialWeight = (float) $sortBatch->initial_weight;
+            $initialWeight = (float) $carveBatch->initial_weight;
 
             if ($driedWeight <= 0) {
-                throw new InvalidArgumentException('Total berat hasil sortir harus lebih besar dari 0.');
+                throw new InvalidArgumentException('Total berat hasil potong ukir harus lebih besar dari 0.');
             }
 
             if ($driedWeight > $initialWeight) {
-                throw new InvalidArgumentException("Total berat hasil sortir ({$driedWeight} kg) tidak boleh melebihi berat bahan baku awal ({$initialWeight} kg).");
+                throw new InvalidArgumentException("Total berat hasil potong ukir ({$driedWeight} kg) tidak boleh melebihi berat bahan baku awal ({$initialWeight} kg).");
             }
 
             $dryingLoss = round($initialWeight - $driedWeight, 2);
@@ -112,11 +112,11 @@ class MaterialSortService
             // Simpan Tanda Tangan Pelapor jika ada
             $reportSignaturePath = $this->saveSignature($data['report_signature_data'] ?? $data['signature_data'] ?? null, 'sig_report');
 
-            $reportPic = $data['report_pic_name'] ?? $data['pic_name'] ?? $sortBatch->pic_name ?? 'Sistem';
+            $reportPic = $data['report_pic_name'] ?? $data['pic_name'] ?? $carveBatch->pic_name ?? 'Sistem';
             $reportDate = $data['report_date'] ?? now();
 
             // Perbarui status batch menjadi completed
-            $sortBatch->update([
+            $carveBatch->update([
                 'status' => 'completed',
                 'dried_weight' => $driedWeight,
                 'drying_loss_weight' => $dryingLoss,
@@ -125,10 +125,10 @@ class MaterialSortService
                 'report_signature_path' => $reportSignaturePath,
             ]);
 
-            $sourceMaterialName = $sortBatch->sourceMaterial?->name ?? 'Bahan Mentah';
-            $sourceUnit = strtolower(trim($sortBatch->sourceMaterial?->unit ?? 'kg'));
+            $sourceMaterialName = $carveBatch->sourceMaterial?->name ?? 'Bahan Mentah';
+            $sourceUnit = strtolower(trim($carveBatch->sourceMaterial?->unit ?? 'kg'));
 
-            // Validasi satuan setiap item hasil sortir harus sama dengan bahan baku asal
+            // Validasi satuan setiap item hasil potong ukir harus sama dengan bahan baku asal
             foreach ($items as $item) {
                 if (empty($item['target_material_id'])) {
                     continue;
@@ -138,12 +138,12 @@ class MaterialSortService
 
                 if ($targetUnit !== $sourceUnit) {
                     throw new InvalidArgumentException(
-                        "Satuan bahan hasil sortir [{$targetMaterial->code}] {$targetMaterial->name} ({$targetMaterial->unit}) tidak sesuai dengan satuan bahan mentah asal ({$sortBatch->sourceMaterial?->unit}). Pembagian hasil sortir harus menggunakan satuan yang sama."
+                        "Satuan bahan hasil potong ukir [{$targetMaterial->code}] {$targetMaterial->name} ({$targetMaterial->unit}) tidak sesuai dengan satuan bahan mentah asal ({$carveBatch->sourceMaterial?->unit}). Pembagian hasil potong ukir harus menggunakan satuan yang sama."
                     );
                 }
             }
 
-            // Simpan setiap item hasil sortir & tambahkan ke stok bahan siap tembak di gudang
+            // Simpan setiap item hasil potong ukir & tambahkan ke stok bahan siap di gudang
             foreach ($items as $item) {
                 $targetMaterial = Material::findOrFail($item['target_material_id']);
                 $resultWeight = (float) $item['result_weight'];
@@ -152,48 +152,48 @@ class MaterialSortService
                     continue;
                 }
 
-                MaterialSortItem::create([
-                    'material_sort_batch_id' => $sortBatch->id,
+                MaterialCarveItem::create([
+                    'material_carve_batch_id' => $carveBatch->id,
                     'target_material_id' => $targetMaterial->id,
                     'result_weight' => $resultWeight,
                     'notes' => $item['notes'] ?? null,
                 ]);
 
-                // Tambahkan stok bahan tembak di gudang
+                // Tambahkan stok bahan di gudang
                 $targetMaterial->increment('stock_quantity', $resultWeight);
                 $targetMaterial->update([
                     'last_weighed_at' => now(),
                     'last_weighed_by' => $reportPic,
                 ]);
 
-                // Catat log alur masuk untuk bahan hasil sortir
+                // Catat log alur masuk untuk bahan hasil potong ukir
                 MaterialLog::create([
                     'material_id' => $targetMaterial->id,
                     'type' => 'in',
-                    'reference_number' => $sortBatch->sort_code,
+                    'reference_number' => $carveBatch->carve_code,
                     'quantity' => $resultWeight,
                     'unit' => $targetMaterial->unit,
                     'actor_by' => $reportPic,
-                    'source_or_destination' => "Hasil Sortir dari {$sourceMaterialName}",
+                    'source_or_destination' => "Hasil Potong Ukir dari {$sourceMaterialName}",
                     'movement_date' => $reportDate,
-                    'notes' => $item['notes'] ?? 'Penerimaan bahan kayu siap tembak hasil sortir.',
+                    'notes' => $item['notes'] ?? 'Penerimaan bahan hasil potong ukir.',
                     'signature_path' => $reportSignaturePath,
                 ]);
             }
 
-            return $sortBatch->fresh(['sourceMaterial', 'items.targetMaterial']);
+            return $carveBatch->fresh(['sourceMaterial', 'items.targetMaterial']);
         });
     }
 
     /**
-     * Simpan proses sortir kayu (backward-compatible: inisiasi + laporan jika items disediakan).
+     * Simpan proses potong ukir (backward-compatible: inisiasi + laporan jika items disediakan).
      */
-    public function createSortBatch(array $data): MaterialSortBatch
+    public function createCarveBatch(array $data): MaterialCarveBatch
     {
-        $batch = $this->initiateSortBatch($data);
+        $batch = $this->initiateCarveBatch($data);
 
         if (! empty($data['items']) && ! empty($data['dried_weight'])) {
-            return $this->submitSortReport($batch, $data);
+            return $this->submitCarveReport($batch, $data);
         }
 
         return $batch;
@@ -209,7 +209,7 @@ class MaterialSortService
             if ($base64Data) {
                 $decodedImage = base64_decode($base64Data);
                 if ($decodedImage !== false) {
-                    $filename = 'material-sorts/signatures/'.$prefix.'_'.time().'_'.uniqid().'.png';
+                    $filename = 'material-carves/signatures/'.$prefix.'_'.time().'_'.uniqid().'.png';
                     Storage::disk('public')->put($filename, $decodedImage);
 
                     return $filename;

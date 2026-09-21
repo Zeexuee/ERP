@@ -31,7 +31,10 @@ class ProductionInventoryTest extends TestCase
 
         $response = $this->get(route('production.materials.index'));
         $response->assertStatus(200);
+        $response->assertSee('Warehouse');
         $response->assertSee('Barang Gudang');
+        $response->assertSee('Sortir Kayu');
+        $response->assertSee('Barang Masuk');
         $response->assertSee('MAT-TEST-001');
         $response->assertSee('Kayu Medang Bahan Dasar');
         $response->assertSee('100.0');
