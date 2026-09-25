@@ -4,6 +4,7 @@ namespace App\Http\Requests\Production;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreTembakReportRequest extends FormRequest
 {
@@ -22,16 +23,30 @@ class StoreTembakReportRequest extends FormRequest
      */
     public function rules(): array
     {
+        $hasResidualResin = $this->float('residual_resin_weight') > 0;
+        $residualDestinationType = $this->string('residual_destination_type')->toString();
+
         return [
-            'report_date' => ['required', 'date'],
+            'report_date' => ['required', 'date', 'before_or_equal:today'],
             'report_pic_name' => ['required', 'string', 'max:100'],
             'wet_result_weight' => ['required', 'numeric', 'min:0.01'],
             'residual_resin_weight' => ['nullable', 'numeric', 'min:0'],
-            'residual_resin_material_id' => ['nullable', 'exists:materials,id'],
-            'dried_result_weight' => ['required', 'numeric', 'min:0.01'],
-            'output_material_id' => ['required', 'exists:materials,id'],
+            'residual_destination_type' => ['required', Rule::in(['none', 'existing', 'new'])],
+            'existing_residual_material_id' => [
+                'nullable',
+                Rule::requiredIf($hasResidualResin && $residualDestinationType === 'existing'),
+                'integer',
+                'exists:materials,id',
+            ],
+            'new_residual_name' => [
+                'nullable',
+                Rule::requiredIf($hasResidualResin && $residualDestinationType === 'new'),
+                'string',
+                'max:255',
+            ],
+            'new_residual_code' => ['nullable', 'string', 'max:50', 'unique:materials,code'],
             'report_notes' => ['nullable', 'string', 'max:1000'],
-            'signature_data' => ['nullable', 'string'],
+            'signature_data' => ['required', 'string', 'starts_with:data:image/png;base64,', 'max:1500000'],
         ];
     }
 
@@ -44,13 +59,19 @@ class StoreTembakReportRequest extends FormRequest
     {
         return [
             'report_date.required' => 'Tanggal laporan wajib diisi.',
-            'report_pic_name.required' => 'Nama PIC penimbang/pelapor wajib diisi.',
-            'wet_result_weight.required' => 'Hasil timbang basah setelah tembak wajib diisi.',
-            'wet_result_weight.min' => 'Hasil timbang basah minimal 0.01.',
-            'dried_result_weight.required' => 'Hasil timbang kering setelah jemur wajib diisi.',
-            'dried_result_weight.min' => 'Hasil timbang kering minimal 0.01.',
-            'output_material_id.required' => 'Pilih bahan hasil tembak yang akan ditambahkan ke stok gudang.',
-            'output_material_id.exists' => 'Bahan hasil tembak yang dipilih tidak valid.',
+            'report_date.before_or_equal' => 'Tanggal laporan tidak boleh melewati hari ini.',
+            'report_pic_name.required' => 'Nama PIC penimbang atau pelapor wajib diisi.',
+            'wet_result_weight.required' => 'Berat hasil tembak wajib diisi.',
+            'wet_result_weight.min' => 'Berat hasil tembak minimal 0,01 kg.',
+            'residual_resin_weight.min' => 'Berat getah sisa tidak boleh negatif.',
+            'residual_destination_type.required' => 'Pilih perlakuan untuk getah sisa.',
+            'existing_residual_material_id.required' => 'Pilih barang Getah tujuan di gudang.',
+            'existing_residual_material_id.exists' => 'Barang Getah tujuan tidak valid.',
+            'new_residual_name.required' => 'Nama barang Getah baru wajib diisi.',
+            'new_residual_code.unique' => 'Kode barang Getah sudah digunakan.',
+            'signature_data.required' => 'Tanda tangan pelapor wajib diisi.',
+            'signature_data.starts_with' => 'Format tanda tangan pelapor tidak valid.',
+            'signature_data.max' => 'Ukuran tanda tangan pelapor terlalu besar.',
         ];
     }
 }

@@ -13,6 +13,7 @@ use App\Http\Controllers\Production\MaterialController;
 use App\Http\Controllers\Production\MaterialMeltController;
 use App\Http\Controllers\Production\MaterialSortController;
 use App\Http\Controllers\Production\ProductionBatchController;
+use App\Http\Controllers\Production\ProductionFinishingController;
 use App\Http\Controllers\Production\ProductionTembakController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\ProductionRequestController;
@@ -125,6 +126,15 @@ Route::middleware('auth')->group(function () {
         Route::post('tembaks', [ProductionTembakController::class, 'store'])->name('tembaks.store');
         Route::get('tembaks/{tembakBatch}', [ProductionTembakController::class, 'show'])->name('tembaks.show')->whereNumber('tembakBatch');
         Route::post('tembaks/{tembakBatch}/report', [ProductionTembakController::class, 'storeReport'])->name('tembaks.store-report')->whereNumber('tembakBatch');
+        Route::post('tembaks/{tembakBatch}/drying-logs', [ProductionTembakController::class, 'storeDryingLog'])->name('tembaks.store-drying-log')->whereNumber('tembakBatch');
+
+        // Proses Finishing (Celup / Molen / Kerok / Bor dengan urutan bebas -> Barang Jadi Siap Jual)
+        Route::get('finishings', [ProductionFinishingController::class, 'index'])->name('finishings.index');
+        Route::get('finishings/create', [ProductionFinishingController::class, 'create'])->name('finishings.create');
+        Route::post('finishings', [ProductionFinishingController::class, 'store'])->name('finishings.store');
+        Route::get('finishings/{finishingSession}', [ProductionFinishingController::class, 'show'])->name('finishings.show')->whereNumber('finishingSession');
+        Route::post('finishings/{finishingSession}/steps', [ProductionFinishingController::class, 'storeStep'])->name('finishings.store-step')->whereNumber('finishingSession');
+        Route::post('finishings/{finishingSession}/complete', [ProductionFinishingController::class, 'complete'])->name('finishings.complete')->whereNumber('finishingSession');
 
         // Proses Produksi (Manufaktur & Laporan Harian)
         Route::get('batches', [ProductionBatchController::class, 'index'])->name('batches.index');

@@ -40,7 +40,7 @@ class MaterialController extends Controller
             $query->where('category', $category);
         }
 
-        $materials = $query->orderBy('name')->paginate(15)->withQueryString();
+        $materials = $query->with('branches')->orderBy('name')->paginate(15)->withQueryString();
 
         $categories = Material::getAllCategories();
 

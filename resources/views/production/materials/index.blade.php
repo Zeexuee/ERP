@@ -118,8 +118,27 @@
                                     {{ $mat->category }}
                                 </span>
                             </td>
-                            <td class="py-3 px-3 text-right font-mono font-bold text-slate-900">
-                                {{ number_format($mat->stock_quantity, 1) }} <span class="font-sans text-[10px] text-slate-500 font-normal">{{ $mat->unit }}</span>
+                            <td class="py-3 px-3 text-right">
+                                @php
+                                    $branchRows = $mat->activeBranches();
+                                    $unbranchedQuantity = $mat->unbranched_quantity;
+                                    $branchRowCount = $branchRows->count() + ($unbranchedQuantity > 0 ? 1 : 0);
+                                @endphp
+                                <button
+                                    type="button"
+                                    onclick="toggleBranchDetail({{ $mat->id }})"
+                                    aria-expanded="false"
+                                    aria-controls="branchDetail{{ $mat->id }}"
+                                    title="Lihat rincian branch"
+                                    class="inline-flex items-center gap-1.5 rounded-xl px-2 py-1 font-mono font-bold text-slate-900 transition hover:bg-slate-100">
+                                    <span>{{ number_format($mat->stock_quantity, 1) }} <span class="font-sans text-[10px] text-slate-500 font-normal">{{ $mat->unit }}</span></span>
+                                    <svg id="branchChevron{{ $mat->id }}" class="w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                                <span class="block text-[9px] font-bold uppercase tracking-widest {{ $branchRows->count() > 1 ? 'text-indigo-700' : 'text-slate-400' }}">
+                                    {{ $branchRowCount === 0 ? 'Tanpa branch' : $branchRowCount.' branch' }}{{ $branchRows->count() > 1 ? ' · gabungan' : '' }}
+                                </span>
                             </td>
                             <td class="py-3 px-3 text-slate-700 text-[11px] font-mono">
                                 @if($mat->last_weighed_at)
@@ -175,6 +194,97 @@
                                     >
                                         Edit
                                     </button>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <tr id="branchDetail{{ $mat->id }}" class="hidden bg-slate-50/80">
+                            <td colspan="8" class="px-3 py-4">
+                                <div class="rounded-2xl border border-slate-200 bg-white p-4">
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                                        <span class="text-[10px] font-bold text-slate-900 uppercase tracking-widest">
+                                            Rincian Branch — {{ $mat->name }}
+                                        </span>
+                                        <span class="font-mono text-[10px] font-bold text-slate-500">
+                                            Total {{ number_format($mat->stock_quantity, 2) }} {{ $mat->unit }}
+                                        </span>
+                                    </div>
+
+                                    @if($mat->hasBranchDiscrepancy())
+                                        <p class="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-[10px] font-bold text-red-800">
+                                            Total branch ({{ number_format($mat->branched_quantity, 2) }} {{ $mat->unit }}) melebihi stok gudang. Data perlu ditinjau.
+                                        </p>
+                                    @endif
+
+                                    @if($branchRowCount === 0)
+                                        <p class="text-[10px] font-bold italic text-slate-400 uppercase tracking-widest">
+                                            Belum ada stok pada barang ini.
+                                        </p>
+                                    @else
+                                        <table class="w-full text-left text-[11px]">
+                                            <thead>
+                                                <tr class="border-b border-slate-100 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                                                    <th class="py-2 pr-3">Kode Branch</th>
+                                                    <th class="py-2 pr-3">Asal</th>
+                                                    <th class="py-2 pr-3">Referensi</th>
+                                                    <th class="py-2 pr-3 text-right">Jumlah</th>
+                                                    <th class="py-2 pr-3 text-right">Porsi</th>
+                                                    <th class="py-2">Dicatat</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-50">
+                                                @foreach($branchRows as $branch)
+                                                    @php
+                                                        $sharePercentage = (float) $mat->stock_quantity > 0
+                                                            ? ((float) $branch->quantity / (float) $mat->stock_quantity) * 100
+                                                            : 0;
+                                                    @endphp
+                                                    <tr>
+                                                        <td class="py-2 pr-3 font-mono font-bold text-slate-900">{{ $branch->branch_code }}</td>
+                                                        <td class="py-2 pr-3">
+                                                            <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-bold text-slate-700 uppercase tracking-widest">
+                                                                {{ $branch->source_label }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="py-2 pr-3 font-mono text-[10px] text-slate-600">{{ $branch->source_reference ?? '-' }}</td>
+                                                        <td class="py-2 pr-3 text-right font-mono font-bold text-slate-900">
+                                                            {{ number_format($branch->quantity, 2) }} {{ $mat->unit }}
+                                                        </td>
+                                                        <td class="py-2 pr-3 text-right font-mono text-[10px] font-bold text-slate-500">
+                                                            {{ number_format($sharePercentage, 1) }}%
+                                                        </td>
+                                                        <td class="py-2 text-[10px] text-slate-500">
+                                                            {{ $branch->created_at?->format('d/m/Y') ?? '-' }}
+                                                            @if($branch->notes)
+                                                                <span class="block text-[9px] text-slate-400">{{ $branch->notes }}</span>
+                                                            @endif
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+
+                                                @if($unbranchedQuantity > 0)
+                                                    <tr class="bg-amber-50/60">
+                                                        <td class="py-2 pr-3 font-mono font-bold text-amber-900">Tanpa Branch</td>
+                                                        <td class="py-2 pr-3">
+                                                            <span class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[9px] font-bold text-amber-800 uppercase tracking-widest">
+                                                                Belum Teridentifikasi
+                                                            </span>
+                                                        </td>
+                                                        <td class="py-2 pr-3 font-mono text-[10px] text-amber-700">-</td>
+                                                        <td class="py-2 pr-3 text-right font-mono font-bold text-amber-900">
+                                                            {{ number_format($unbranchedQuantity, 2) }} {{ $mat->unit }}
+                                                        </td>
+                                                        <td class="py-2 pr-3 text-right font-mono text-[10px] font-bold text-amber-700">
+                                                            {{ number_format((float) $mat->stock_quantity > 0 ? ($unbranchedQuantity / (float) $mat->stock_quantity) * 100 : 0, 1) }}%
+                                                        </td>
+                                                        <td class="py-2 text-[10px] text-amber-700">
+                                                            Masuk dari alur yang belum mencatat branch.
+                                                        </td>
+                                                    </tr>
+                                                @endif
+                                            </tbody>
+                                        </table>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -649,6 +759,21 @@
 <script>
     let currentSortSourceMaterialId = null;
     let currentSortSourceUnit = '';
+
+    function toggleBranchDetail(id) {
+        const detailRow = document.getElementById('branchDetail' + id);
+        const chevron = document.getElementById('branchChevron' + id);
+
+        if (!detailRow) {
+            return;
+        }
+
+        const isHidden = detailRow.classList.toggle('hidden');
+        chevron?.classList.toggle('rotate-180', !isHidden);
+        document
+            .querySelector('[aria-controls="branchDetail' + id + '"]')
+            ?.setAttribute('aria-expanded', String(!isHidden));
+    }
 
     function openNewMaterialModal() {
         document.getElementById('newMaterialModal').classList.remove('hidden');

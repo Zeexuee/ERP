@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Material extends Model
 {
@@ -19,6 +20,7 @@ class Material extends Model
         'Getah',
         'Metanol',
         'Pewarna',
+        'Ampas Finishing',
     ];
 
     /**
@@ -76,8 +78,71 @@ class Material extends Model
         return $this->hasMany(MaterialLog::class);
     }
 
+    public function branches(): HasMany
+    {
+        return $this->hasMany(MaterialBranch::class)->orderByDesc('quantity');
+    }
+
     public function isLowStock(): bool
     {
         return $this->stock_quantity <= $this->minimum_stock;
+    }
+
+    /**
+     * Branch yang masih menyimpan stok pada barang ini.
+     *
+     * @return Collection<int, MaterialBranch>
+     */
+    public function activeBranches(): Collection
+    {
+        $branches = $this->relationLoaded('branches')
+            ? $this->branches
+            : $this->branches()->get();
+
+        return $branches->where('quantity', '>', 0)->values();
+    }
+
+    /**
+     * Total stok yang sudah punya identitas branch.
+     */
+    public function getBranchedQuantityAttribute(): float
+    {
+        return round((float) $this->activeBranches()->sum('quantity'), 2);
+    }
+
+    /**
+     * Stok yang belum punya identitas branch. Nilainya di atas 0 berarti ada
+     * pemasukan stok dari alur yang belum mencatat branch.
+     */
+    public function getUnbranchedQuantityAttribute(): float
+    {
+        return round(max((float) $this->stock_quantity - $this->branched_quantity, 0), 2);
+    }
+
+    /**
+     * Buku besar branch melebihi stok gudang, menandakan data perlu ditinjau.
+     */
+    public function hasBranchDiscrepancy(): bool
+    {
+        return $this->branched_quantity - (float) $this->stock_quantity > 0.001;
+    }
+
+    /**
+     * Label identitas branch stok barang ini. Barang yang memuat lebih dari satu
+     * branch ditandai sebagai gabungan.
+     */
+    public function getBranchLabelAttribute(): string
+    {
+        $activeBranches = $this->activeBranches();
+
+        if ($activeBranches->isEmpty()) {
+            return 'Tanpa Branch';
+        }
+
+        if ($activeBranches->count() === 1) {
+            return (string) $activeBranches->first()->branch_code;
+        }
+
+        return $activeBranches->pluck('branch_code')->implode(' + ').' (Gabungan)';
     }
 }
