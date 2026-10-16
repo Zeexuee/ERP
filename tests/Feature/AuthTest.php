@@ -64,6 +64,25 @@ class AuthTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_stin_user_login_redirects_to_stin_dashboard(): void
+    {
+        auth()->logout();
+
+        $user = User::factory()->create([
+            'email' => 'stin_officer@erp.com',
+            'role' => UserRole::STIN,
+            'password' => Hash::make('password123'),
+        ]);
+
+        $response = $this->post('/login', [
+            'email' => 'stin_officer@erp.com',
+            'password' => 'password123',
+        ]);
+
+        $response->assertRedirect(route('stin.dashboard'));
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_super_role_user_login_redirects_to_sales_dashboard_as_first_page(): void
     {
         auth()->logout();

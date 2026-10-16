@@ -452,11 +452,12 @@ class ProductionFinishingService
         int $outputQuantity,
         float $outputWeight
     ): ProductBranch {
-        $branchCode = $session->branch_code ?? $session->finishing_code;
+        // Kode masak yang terbawa dari tembak menjadi identitas lot barang jadi.
+        // Bila bahan asalnya tidak punya kode masak, kode finishing yang dipakai.
+        $branchCode = $session->cook_code ?? $session->finishing_code;
         $specification = sprintf(
-            'Hasil finishing %s (branch %s). Berat akhir %s kg dari bahan %s.',
-            $session->finishing_code,
-            $session->branch_label,
+            '%s. Berat akhir %s kg dari bahan %s.',
+            $session->finishing_label,
             number_format($outputWeight, 2, ',', '.'),
             $session->sourceMaterial?->name ?? '-'
         );
@@ -470,6 +471,7 @@ class ProductionFinishingService
         if ($branch) {
             $branch->update([
                 'quantity' => (int) $branch->quantity + $outputQuantity,
+                'weight' => round((float) $branch->weight + $outputWeight, 2),
                 'specification_notes' => $specification,
             ]);
 
@@ -478,9 +480,12 @@ class ProductionFinishingService
 
         return ProductBranch::create([
             'product_id' => $product->id,
-            'branch_name' => "Branch Produksi {$session->branch_label}",
+            'branch_name' => $session->cook_code
+                ? "Kode Masak {$session->branch_label}"
+                : "Finishing {$session->finishing_code}",
             'branch_code' => $branchCode,
             'quantity' => $outputQuantity,
+            'weight' => $outputWeight,
             'specification_notes' => $specification,
         ]);
     }

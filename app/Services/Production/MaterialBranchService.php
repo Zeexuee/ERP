@@ -11,30 +11,30 @@ use Illuminate\Support\Str;
 class MaterialBranchService
 {
     /**
-     * Prefix branch yang lahir dari proses tembak.
+     * Prefix kode masak, yaitu identitas lot yang lahir dari proses tembak.
      */
-    public const PREFIX_TEMBAK = 'BR';
+    public const PREFIX_COOK = 'MSK';
 
     /**
-     * Prefix branch gabungan yang lahir saat beberapa branch tercampur.
+     * Prefix branch gabungan yang lahir saat beberapa kode masak tercampur.
      */
     public const PREFIX_MERGED = 'BRM';
 
     /**
-     * Terbitkan identitas branch baru untuk sebuah sesi tembak. Nomor urutnya
-     * diambil dari tabel tembak sendiri sehingga tidak pernah bertabrakan
-     * dengan branch gabungan yang memakai prefix berbeda.
+     * Terbitkan kode masak baru untuk sebuah sesi tembak. Nomor urutnya diambil
+     * dari tabel tembak sendiri sehingga tidak pernah bertabrakan dengan branch
+     * gabungan yang memakai prefix berbeda.
      */
-    public function generateTembakBranchCode(): string
+    public function generateCookCode(): string
     {
         return $this->nextCode(
-            self::PREFIX_TEMBAK,
+            self::PREFIX_COOK,
             fn (string $prefix): ?string => ProductionTembakBatch::query()
-                ->where('branch_code', 'like', $prefix.'%')
-                ->orderByDesc('branch_code')
+                ->where('cook_code', 'like', $prefix.'%')
+                ->orderByDesc('cook_code')
                 ->lockForUpdate()
-                ->value('branch_code'),
-            fn (string $code): bool => ProductionTembakBatch::where('branch_code', $code)->exists()
+                ->value('cook_code'),
+            fn (string $code): bool => ProductionTembakBatch::where('cook_code', $code)->exists()
         );
     }
 
@@ -164,9 +164,9 @@ class MaterialBranchService
     }
 
     /**
-     * Tentukan identitas branch yang dibawa sebuah proses lanjutan. Bila stok
-     * asalnya bercampur, terbitkan branch gabungan baru yang menyimpan jejak
-     * seluruh branch penyusunnya.
+     * Tentukan identitas lot yang dibawa sebuah proses lanjutan. Bila stok
+     * asalnya bercampur dari beberapa kode masak, terbitkan branch gabungan
+     * baru yang menyimpan jejak seluruh lot penyusunnya.
      *
      * @param  array<string, float>  $consumedBranches
      * @return array{branch_code: string|null, branch_is_merged: bool, source_branch_codes: array<int, string>|null}

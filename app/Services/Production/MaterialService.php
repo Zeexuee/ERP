@@ -3,6 +3,7 @@
 namespace App\Services\Production;
 
 use App\Models\Material;
+use App\Models\MaterialDryingLog;
 use App\Models\MaterialLog;
 use App\Models\MaterialReceipt;
 use Illuminate\Http\UploadedFile;
@@ -130,7 +131,7 @@ class MaterialService
                 'reference_number' => $refNumber,
                 'quantity' => $actualStock,
                 'unit' => $material->unit,
-                'actor_by' => ! empty($weighedBy) ? $weighedBy . ' (Warehouse)' : 'Warehouse',
+                'actor_by' => ! empty($weighedBy) ? $weighedBy.' (Warehouse)' : 'Warehouse',
                 'source_or_destination' => 'Timbang Ulang Stok Opname',
                 'movement_date' => now(),
                 'notes' => $notes ?: null,
@@ -304,6 +305,110 @@ class MaterialService
                 'target' => $targetMaterial->refresh(),
                 'sorted_quantity' => $sortedQty,
             ];
+        });
+    }
+
+    /**
+     * Inisiasi proses jemur bahan baku.
+     */
+    public function initiateDryingLog(Material $material, array $data): MaterialDryingLog
+    {
+        return DB::transaction(function () use ($material, $data) {
+            $previousWeight = (float) $material->stock_quantity;
+
+            $signaturePath = null;
+            if (! empty($data['signature_data']) && str_contains($data['signature_data'], 'base64,')) {
+                $base64Data = explode('base64,', $data['signature_data'])[1] ?? null;
+                if ($base64Data) {
+                    $decodedImage = base64_decode($base64Data);
+                    $filename = 'material-dryings/signatures/sig_'.time().'_'.uniqid().'.png';
+                    Storage::disk('public')->put($filename, $decodedImage);
+                    $signaturePath = $filename;
+                }
+            }
+
+            return $material->dryingLogs()->create([
+                'start_date' => $data['start_date'],
+                'previous_weight' => $previousWeight,
+                'pic_name' => $data['pic_name'],
+                'notes' => $data['notes'] ?? null,
+                'signature_path' => $signaturePath,
+                'status' => 'menunggu',
+            ]);
+        });
+    }
+
+    /**
+     * Laporan selesai proses jemur bahan baku dan kurangi stok berdasarkan penyusutan.
+     */
+    public function reportDryingLog(MaterialDryingLog $log, array $data): MaterialDryingLog
+    {
+        return DB::transaction(function () use ($log, $data) {
+            $material = $log->material;
+
+            // Previous weight used at initiation time
+            $previousWeight = (float) $log->previous_weight;
+            $newWeight = (float) $data['new_weight'];
+
+            if ($newWeight > $previousWeight) {
+                throw new \InvalidArgumentException("Berat setelah dijemur ({$newWeight} {$material->unit}) tidak boleh melebihi berat sebelum dijemur ({$previousWeight} {$material->unit}).");
+            }
+
+            $shrinkage = $previousWeight - $newWeight;
+
+            $signaturePath = null;
+            if (! empty($data['signature_data']) && str_contains($data['signature_data'], 'base64,')) {
+                $base64Data = explode('base64,', $data['signature_data'])[1] ?? null;
+                if ($base64Data) {
+                    $decodedImage = base64_decode($base64Data);
+                    $filename = 'material-dryings/signatures/sig_report_'.time().'_'.uniqid().'.png';
+                    Storage::disk('public')->put($filename, $decodedImage);
+                    $signaturePath = $filename;
+                }
+            }
+
+            $notes = $log->notes;
+            if (! empty($data['notes'])) {
+                $notes = $notes ? $notes."\nLaporan: ".$data['notes'] : 'Laporan: '.$data['notes'];
+            }
+
+            $picName = $data['pic_name'] ?? $log->pic_name;
+
+            $log->update([
+                'end_date' => $data['end_date'],
+                'new_weight' => $newWeight,
+                'shrinkage_weight' => $shrinkage,
+                'status' => 'selesai',
+                'report_signature_path' => $signaturePath,
+                'notes' => $notes,
+                'pic_name' => $picName,
+            ]);
+
+            // Update stok fisik material
+            $material->update([
+                'stock_quantity' => $newWeight,
+                'last_weighed_at' => now(),
+                'last_weighed_by' => $picName,
+            ]);
+
+            // Catat log material movement jika ada penyusutan
+            if ($shrinkage > 0) {
+                $refNumber = 'DRY-'.date('Ymd').'-'.str_pad($material->id, 4, '0', STR_PAD_LEFT);
+                MaterialLog::create([
+                    'material_id' => $material->id,
+                    'type' => 'out',
+                    'reference_number' => $refNumber,
+                    'quantity' => $shrinkage,
+                    'unit' => $material->unit,
+                    'actor_by' => $log->pic_name,
+                    'source_or_destination' => 'Penyusutan Proses Jemur',
+                    'movement_date' => $data['end_date'],
+                    'notes' => 'Penyusutan stok akibat proses jemur bahan baku.',
+                ]);
+                self::pruneOldLogs(60);
+            }
+
+            return $log;
         });
     }
 

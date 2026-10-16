@@ -4,7 +4,6 @@ namespace App\Http\Requests\Production;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StoreTembakDryingLogRequest extends FormRequest
 {
@@ -23,8 +22,6 @@ class StoreTembakDryingLogRequest extends FormRequest
      */
     public function rules(): array
     {
-        $isCompleted = $this->boolean('is_completed');
-        $destinationType = $this->string('destination_type')->toString();
 
         return [
             'weighed_date' => ['required', 'date', 'before_or_equal:today'],
@@ -32,24 +29,6 @@ class StoreTembakDryingLogRequest extends FormRequest
             'pic_name' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
             'is_completed' => ['required', 'boolean'],
-            'destination_type' => [
-                'nullable',
-                Rule::requiredIf($isCompleted),
-                Rule::in(['existing', 'new']),
-            ],
-            'output_material_id' => [
-                'nullable',
-                Rule::requiredIf($isCompleted && $destinationType === 'existing'),
-                'integer',
-                'exists:materials,id',
-            ],
-            'new_output_name' => [
-                'nullable',
-                Rule::requiredIf($isCompleted && $destinationType === 'new'),
-                'string',
-                'max:255',
-            ],
-            'new_output_code' => ['nullable', 'string', 'max:50', 'unique:materials,code'],
         ];
     }
 
@@ -66,11 +45,6 @@ class StoreTembakDryingLogRequest extends FormRequest
             'new_weight.required' => 'Berat setelah jemur wajib diisi.',
             'new_weight.min' => 'Berat setelah jemur minimal 0,01 kg.',
             'pic_name.required' => 'Nama PIC timbang jemur wajib diisi.',
-            'destination_type.required' => 'Pilih barang baku tujuan hasil jemur.',
-            'output_material_id.required' => 'Pilih barang baku gudang tujuan.',
-            'output_material_id.exists' => 'Barang baku gudang tujuan tidak valid.',
-            'new_output_name.required' => 'Nama barang baku baru wajib diisi.',
-            'new_output_code.unique' => 'Kode barang baku sudah digunakan.',
         ];
     }
 }

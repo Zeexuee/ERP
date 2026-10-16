@@ -12,6 +12,7 @@ use App\Models\ProductionTembakMaterial;
 use App\Services\Production\ProductionTembakService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use InvalidArgumentException;
 use Throwable;
@@ -35,6 +36,7 @@ class ProductionTembakController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($query) use ($search) {
                 $query->where('tembak_code', 'like', "%{$search}%")
+                    ->orWhere('cook_code', 'like', "%{$search}%")
                     ->orWhere('pic_name', 'like', "%{$search}%")
                     ->orWhere('report_pic_name', 'like', "%{$search}%")
                     ->orWhereHas('materials.material', fn ($materialQuery) => $materialQuery
@@ -113,7 +115,8 @@ class ProductionTembakController extends Controller
             ->whereRaw('LOWER(unit) = ?', ['kg'])
             ->orderBy('name')
             ->get();
-        $outputMaterials = Material::whereRaw('LOWER(unit) = ?', ['kg'])
+        $outputMaterials = Material::whereRaw('LOWER(category) = ?', [Str::lower(Material::CATEGORY_TEMBAK_RESULT)])
+            ->whereRaw('LOWER(unit) = ?', ['kg'])
             ->orderBy('name')
             ->get();
 

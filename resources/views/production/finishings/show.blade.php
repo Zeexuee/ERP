@@ -41,7 +41,7 @@
                 {{ $finishingSession->status_label }}
             </span>
             <span class="rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-1 font-mono text-[10px] font-bold text-indigo-900 uppercase tracking-widest">
-                Branch {{ $finishingSession->branch_label }}
+                {{ $finishingSession->cook_code ? 'Kode Masak' : 'Branch' }} {{ $finishingSession->branch_label }}
             </span>
         </div>
         <a href="{{ route('production.finishings.index') }}" class="self-start rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-900 shadow-xs transition hover:bg-slate-100 sm:self-auto uppercase tracking-widest">
@@ -74,6 +74,11 @@
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section class="apple-glass-panel space-y-4 rounded-3xl p-6 shadow-md">
             <h3 class="border-b border-slate-900/10 pb-2 text-sm font-bold text-slate-900 uppercase tracking-widest">Informasi Sesi</h3>
+
+            <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <span class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Identitas Proses</span>
+                <span class="mt-1 block font-mono text-xs font-bold text-slate-900">{{ $finishingSession->finishing_label }}</span>
+            </div>
 
             <dl class="space-y-3 text-sm text-slate-900">
                 <div class="flex items-center justify-between gap-4">

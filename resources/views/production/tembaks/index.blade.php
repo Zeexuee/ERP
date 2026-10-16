@@ -26,9 +26,9 @@
             <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Getah Digunakan</span>
             <div class="mt-1 font-mono text-2xl font-bold text-slate-900">{{ number_format($totalResinUsed, 1) }} <span class="font-sans text-xs text-slate-500">kg</span></div>
         </div>
-        <div class="apple-glass-card rounded-2xl bg-slate-900 p-5 text-white">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Hasil Jemur Selesai</span>
-            <div class="mt-1 font-mono text-2xl font-bold">{{ number_format($totalDriedProduced, 1) }} <span class="font-sans text-xs text-slate-400">kg</span></div>
+        <div class="apple-glass-card rounded-2xl p-5">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Hasil Jemur Selesai</span>
+            <div class="mt-1 font-mono text-2xl font-bold text-slate-900">{{ number_format($totalDriedProduced, 1) }} <span class="font-sans text-xs text-slate-500">kg</span></div>
         </div>
     </div>
 
@@ -70,6 +70,9 @@
                         <tr class="transition hover:bg-slate-50">
                             <td class="px-3 py-3">
                                 <div class="font-mono font-bold text-slate-900">{{ $batch->tembak_code }}</div>
+                                @if($batch->cook_code)
+                                    <div class="font-mono text-[10px] font-bold text-indigo-700">Masak {{ $batch->cook_code }}</div>
+                                @endif
                                 <div class="mb-1.5 text-[10px] font-bold text-slate-500">{{ $batch->tembak_date?->format('d/m/Y') ?? '-' }}</div>
                                 <span class="inline-block rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest
                                     {{ $batch->isCompleted()

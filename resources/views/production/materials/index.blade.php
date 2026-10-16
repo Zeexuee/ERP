@@ -178,6 +178,7 @@
                                     >
                                         Split
                                     </button>
+
                                     <button 
                                         type="button" 
                                         onclick="openRecountModal({{ $mat->id }}, '{{ addslashes($mat->code) }}', '{{ addslashes($mat->name) }}', {{ (float) $mat->stock_quantity }}, '{{ addslashes($mat->unit) }}', '{{ addslashes($mat->last_weighed_by ?? '') }}')" 
@@ -240,7 +241,12 @@
                                                             : 0;
                                                     @endphp
                                                     <tr>
-                                                        <td class="py-2 pr-3 font-mono font-bold text-slate-900">{{ $branch->branch_code }}</td>
+                                                        <td class="py-2 pr-3">
+                                                            <span class="block font-mono font-bold text-slate-900">{{ $branch->branch_code }}</span>
+                                                            @if($branch->isCookLot())
+                                                                <span class="text-[9px] font-bold text-indigo-700 uppercase tracking-widest">Kode Masak</span>
+                                                            @endif
+                                                        </td>
                                                         <td class="py-2 pr-3">
                                                             <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-bold text-slate-700 uppercase tracking-widest">
                                                                 {{ $branch->source_label }}
@@ -756,6 +762,7 @@
     </div>
 </div>
 
+
 <script>
     let currentSortSourceMaterialId = null;
     let currentSortSourceUnit = '';
@@ -781,6 +788,8 @@
     function closeNewMaterialModal() {
         document.getElementById('newMaterialModal').classList.add('hidden');
     }
+
+
 
     function openSortModal(id, code, name, stock, unit) {
         currentSortSourceMaterialId = id;

@@ -71,6 +71,11 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-4">
                     <div>
+                        <label class="block text-xs font-bold text-slate-900 uppercase tracking-widest mb-1">Kode Tembak</label>
+                        <input type="text" name="tembak_code" value="{{ old('tembak_code') }}" class="w-full px-3 py-2 rounded-xl apple-input text-xs font-bold uppercase" required placeholder="Batch">
+                    </div>
+
+                    <div>
                         <label class="block text-xs font-bold text-slate-900 uppercase tracking-widest mb-1">Tanggal Proses</label>
                         <input type="date" name="tembak_date" value="{{ old('tembak_date') }}" class="w-full px-3 py-2 rounded-xl apple-input text-xs font-bold" required>
                     </div>

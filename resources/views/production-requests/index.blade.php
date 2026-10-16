@@ -9,9 +9,7 @@
         </div>
         <div>
             @if(auth()->user()?->hasRole('sales'))
-                <a href="{{ url('/production/batches/1') }}" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm transition inline-block">
-                    + Tambah Antrean
-                </a>
+
             @else
                 <span class="px-4 py-1.5 rounded-full text-xs font-bold badge-dark inline-block">
                     Mode Lihat Saja

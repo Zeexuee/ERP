@@ -36,14 +36,14 @@ class MaterialBranchBreakdownTest extends TestCase
 
         MaterialBranch::create([
             'material_id' => $material->id,
-            'branch_code' => 'BR-202609-0001',
+            'branch_code' => 'MSK-202609-0001',
             'quantity' => 18.00,
             'source_type' => MaterialBranch::SOURCE_TEMBAK,
             'source_reference' => 'TBK-202609-0001',
         ]);
         MaterialBranch::create([
             'material_id' => $material->id,
-            'branch_code' => 'BR-202609-0002',
+            'branch_code' => 'MSK-202609-0002',
             'quantity' => 12.00,
             'source_type' => MaterialBranch::SOURCE_TEMBAK,
             'source_reference' => 'TBK-202609-0002',
@@ -53,8 +53,8 @@ class MaterialBranchBreakdownTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('Rincian Branch');
-        $response->assertSee('BR-202609-0001');
-        $response->assertSee('BR-202609-0002');
+        $response->assertSee('MSK-202609-0001');
+        $response->assertSee('MSK-202609-0002');
         $response->assertSee('TBK-202609-0001');
         $response->assertSee('TBK-202609-0002');
         // Porsi tiap branch terhadap total 30 kg.
@@ -83,7 +83,7 @@ class MaterialBranchBreakdownTest extends TestCase
 
         MaterialBranch::create([
             'material_id' => $material->id,
-            'branch_code' => 'BR-202609-0003',
+            'branch_code' => 'MSK-202609-0003',
             'quantity' => 10.00,
             'source_type' => MaterialBranch::SOURCE_TEMBAK,
         ]);
@@ -91,7 +91,7 @@ class MaterialBranchBreakdownTest extends TestCase
         $response = $this->actingAs($this->productionUser)->get(route('production.materials.index'));
 
         $response->assertOk();
-        $response->assertSee('BR-202609-0003');
+        $response->assertSee('MSK-202609-0003');
         $response->assertSee('Tanpa Branch');
         $response->assertSee('Belum Teridentifikasi');
 
@@ -114,7 +114,7 @@ class MaterialBranchBreakdownTest extends TestCase
 
         MaterialBranch::create([
             'material_id' => $material->id,
-            'branch_code' => 'BR-202609-0004',
+            'branch_code' => 'MSK-202609-0004',
             'quantity' => 9.00,
             'source_type' => MaterialBranch::SOURCE_TEMBAK,
         ]);

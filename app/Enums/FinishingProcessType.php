@@ -8,6 +8,7 @@ enum FinishingProcessType: string
     case MOLEN = 'molen';
     case KEROK = 'kerok';
     case BOR = 'bor';
+    case PRESS = 'press'; // untuk drop down status press di halaman laporan finishing
 
     public function label(): string
     {
@@ -16,6 +17,7 @@ enum FinishingProcessType: string
             self::MOLEN => 'Molen (Digiling Halus)',
             self::KEROK => 'Kerok (Dibentuk)',
             self::BOR => 'Bor (Dibentuk)',
+            self::PRESS => 'Press (Ditekan)',
         };
     }
 
@@ -26,6 +28,7 @@ enum FinishingProcessType: string
             self::MOLEN => 'Kayu digiling dengan molen untuk dihaluskan.',
             self::KEROK => 'Kayu dikerok untuk dibentuk.',
             self::BOR => 'Kayu dibor untuk dibentuk.',
+            self::PRESS => 'Getah dipress untuk dipadatkan atau dibentuk.',
         };
     }
 

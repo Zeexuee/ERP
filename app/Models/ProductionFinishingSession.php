@@ -84,6 +84,28 @@ class ProductionFinishingSession extends Model
             : $this->branch_code;
     }
 
+    /**
+     * Kode masak yang terbawa ke sesi finishing ini. Bernilai null bila bahan
+     * asalnya belum punya identitas lot.
+     */
+    public function getCookCodeAttribute(): ?string
+    {
+        return $this->branch_code;
+    }
+
+    /**
+     * Penamaan sesi finishing lengkap dengan kode masak yang dibawanya,
+     * contoh "Finishing MSK-202609-0001 · Kode Finishing FIN-202609-0001".
+     */
+    public function getFinishingLabelAttribute(): string
+    {
+        return sprintf(
+            'Finishing %s · Kode Finishing %s',
+            $this->branch_label,
+            $this->finishing_code
+        );
+    }
+
     public function getTotalWasteWeightAttribute(): float
     {
         return round((float) $this->steps->sum('waste_weight'), 2);

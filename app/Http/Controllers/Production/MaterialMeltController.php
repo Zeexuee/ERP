@@ -51,15 +51,18 @@ class MaterialMeltController extends Controller
     public function store(Request $request, MaterialMeltService $service): RedirectResponse
     {
         $validated = $request->validate([
+            'melt_code' => ['required', 'string', 'max:100', 'unique:material_melt_batches,melt_code'],
             'source_material_id' => ['required', 'exists:materials,id'],
             'initial_weight' => ['required', 'numeric', 'min:0.01'],
             'melt_date' => ['required', 'date'],
             'pic_name' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [
-            'source_material_id.required' => 'Pilih bahan baku getah padat yang akan dicairkan.',
+            'melt_code.required' => 'Kode batch wajib diisi.',
+            'melt_code.unique' => 'Kode batch sudah digunakan.',
+            'source_material_id.required' => 'Pilih getah padat yang akan dicairkan.',
             'initial_weight.required' => 'Masukkan berat getah padat.',
-            'pic_name.required' => 'Isi nama penanggung jawab (PIC).',
+            'pic_name.required' => 'Isi nama PIC.',
         ]);
 
         try {

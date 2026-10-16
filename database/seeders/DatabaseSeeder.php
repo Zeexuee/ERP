@@ -12,9 +12,6 @@ use App\Models\MaterialReceipt;
 use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductBranch;
-use App\Models\ProductionBatch;
-use App\Models\ProductionBatchMaterial;
-use App\Models\ProductionDailyLog;
 use App\Models\ProductionRequest;
 use App\Models\SalesOrder;
 use App\Models\SalesOrderItem;
@@ -29,9 +26,7 @@ class DatabaseSeeder extends Seeder
     {
         // Bersihkan seluruh data sebelumnya
         Schema::disableForeignKeyConstraints();
-        ProductionDailyLog::truncate();
-        ProductionBatchMaterial::truncate();
-        ProductionBatch::truncate();
+
         MaterialReceipt::truncate();
         Material::truncate();
         Payment::truncate();
@@ -206,71 +201,5 @@ class DatabaseSeeder extends Seeder
             'payment_date' => Carbon::now()->subDays(3)->toDateString(),
         ]);
 
-        // 4. Sample Batch Produksi Manufaktur: Pengolahan Kayu Gaharu Sana'i Super Malaki
-        $pr1 = ProductionRequest::where('request_number', 'PR-2026-0001')->first();
-        $batch = ProductionBatch::create([
-            'batch_number' => 'BATCH-2026-001',
-            'product_id' => $prodSuperMalaki->id,
-            'production_request_id' => $pr1?->id,
-            'target_quantity' => 10.00,
-            'actual_quantity' => null,
-            'unit' => 'kg',
-            'status' => 'in_progress',
-            'stage' => '2. Infusi / Vacuum Pressure Resin & Minyak',
-            'start_date' => Carbon::now()->subDays(2)->toDateString(),
-            'target_completion_date' => Carbon::now()->addDays(3)->toDateString(),
-            'pic_name' => 'Bambang Sudiro (Mandor Pabrik Sentul)',
-            'notes' => 'Batch ekspor pesanan PT Oud Nusantara. Gunakan kayu medang kering kadar air < 12%, formula infusi resin Merauke 65% dan minyak gaharu murni.',
-        ]);
-
-        // Alokasikan bahan baku dari gudang (mengurangi stok gudang)
-        $matKayu = Material::where('code', 'MAT-GHR-001')->first();
-        $matMinyak = Material::where('code', 'MAT-GHR-002')->first();
-        $matResin = Material::where('code', 'MAT-GHR-003')->first();
-
-        if ($matKayu && $matMinyak && $matResin) {
-            ProductionBatchMaterial::create([
-                'production_batch_id' => $batch->id,
-                'material_id' => $matKayu->id,
-                'quantity_used' => 10.00,
-                'unit' => 'kg',
-            ]);
-            $matKayu->decrement('stock_quantity', 10.00);
-
-            ProductionBatchMaterial::create([
-                'production_batch_id' => $batch->id,
-                'material_id' => $matMinyak->id,
-                'quantity_used' => 2.00,
-                'unit' => 'tola',
-            ]);
-            $matMinyak->decrement('stock_quantity', 2.00);
-
-            ProductionBatchMaterial::create([
-                'production_batch_id' => $batch->id,
-                'material_id' => $matResin->id,
-                'quantity_used' => 1.50,
-                'unit' => 'kg',
-            ]);
-            $matResin->decrement('stock_quantity', 1.50);
-        }
-
-        // Tambahkan 2 catatan laporan proses harian
-        ProductionDailyLog::create([
-            'production_batch_id' => $batch->id,
-            'log_date' => Carbon::now()->subDays(2)->toDateString(),
-            'stage' => '1. Persiapan Bahan & Sortir Kayu',
-            'progress_percentage' => 30,
-            'pic_name' => 'Bambang Sudiro',
-            'notes' => 'Sortir 10 kg potongan kayu medang selesai. Pembersihan serat dan penimbangan bahan infusi siap.',
-        ]);
-
-        ProductionDailyLog::create([
-            'production_batch_id' => $batch->id,
-            'log_date' => Carbon::now()->subDay()->toDateString(),
-            'stage' => '2. Infusi / Vacuum Pressure Resin & Minyak',
-            'progress_percentage' => 65,
-            'pic_name' => 'Asep Kurniawan (Operator Mesin Vacuum)',
-            'notes' => 'Proses tabung kompresi bertekanan tinggi 4 bar selama 14 jam. Minyak gaharu dan resin meresap pekat hingga ke inti serat kayu.',
-        ]);
     }
 }

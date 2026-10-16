@@ -38,9 +38,9 @@
             <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Proses Tercatat</span>
             <div class="mt-1 font-mono text-2xl font-bold text-slate-900">{{ number_format($totalSteps) }}</div>
         </div>
-        <div class="apple-glass-card rounded-2xl bg-slate-900 p-5 text-white">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Barang Jadi Dihasilkan</span>
-            <div class="mt-1 font-mono text-2xl font-bold">{{ number_format($totalOutputWeight, 1) }} <span class="font-sans text-xs text-slate-400">kg</span></div>
+        <div class="apple-glass-card rounded-2xl p-5">
+            <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Barang Jadi Dihasilkan</span>
+            <div class="mt-1 font-mono text-2xl font-bold text-slate-900">{{ number_format($totalOutputWeight, 1) }} <span class="font-sans text-xs text-slate-500">kg</span></div>
         </div>
     </div>
 

@@ -15,11 +15,13 @@ class ProductBranch extends Model
         'branch_name',
         'branch_code',
         'quantity',
+        'weight',
         'specification_notes',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
+        'weight' => 'decimal:2',
     ];
 
     public function product(): BelongsTo

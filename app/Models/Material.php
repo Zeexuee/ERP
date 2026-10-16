@@ -14,9 +14,17 @@ class Material extends Model
     /**
      * Kategori utama standar bahan baku warehouse.
      */
+    /**
+     * Kategori khusus penampung keluaran proses tembak, dipisahkan dari bahan
+     * mentah supaya hasil masakan mudah dibedakan di gudang.
+     */
+    public const CATEGORY_TEMBAK_RESULT = 'Hasil Tembak';
+
     public const DEFAULT_CATEGORIES = [
         'Bahan Sortir',
+        'Hasil Sortir',
         'Bahan Tembak',
+        self::CATEGORY_TEMBAK_RESULT,
         'Getah',
         'Metanol',
         'Pewarna',
@@ -52,6 +60,7 @@ class Material extends Model
         'stock_quantity',
         'minimum_stock',
         'unit_cost',
+        'source_tembak_code',
         'last_weighed_at',
         'last_weighed_by',
     ];
@@ -68,14 +77,14 @@ class Material extends Model
         return $this->hasMany(MaterialReceipt::class);
     }
 
-    public function batchMaterials(): HasMany
-    {
-        return $this->hasMany(ProductionBatchMaterial::class);
-    }
-
     public function logs(): HasMany
     {
         return $this->hasMany(MaterialLog::class);
+    }
+
+    public function dryingLogs(): HasMany
+    {
+        return $this->hasMany(MaterialDryingLog::class);
     }
 
     public function branches(): HasMany

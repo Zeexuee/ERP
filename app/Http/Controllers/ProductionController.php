@@ -8,6 +8,7 @@ use App\Models\MaterialLog;
 use App\Models\Product;
 use App\Models\ProductBranch;
 use App\Models\ProductionRequest;
+use App\Services\Production\ProductionKanbanService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -54,6 +55,17 @@ class ProductionController extends Controller
             'warehouseMaterials',
             'recentMaterialLogs'
         ));
+    }
+
+    /**
+     * Papan kanban seluruh proses produksi yang sedang berjalan.
+     */
+    public function kanban(ProductionKanbanService $kanbanService): View
+    {
+        $columns = $kanbanService->buildColumns();
+        $summary = $kanbanService->summarize($columns);
+
+        return view('production.kanban', compact('columns', 'summary'));
     }
 
     /**

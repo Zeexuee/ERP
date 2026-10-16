@@ -20,7 +20,7 @@ class ProductionTembakBatch extends Model
 
     protected $fillable = [
         'tembak_code',
-        'branch_code',
+        'cook_code',
         'wet_result_weight',
         'residual_resin_weight',
         'residual_resin_material_id',
@@ -68,6 +68,16 @@ class ProductionTembakBatch extends Model
             self::STATUS_COMPLETED => 'Selesai',
             default => 'Status Tidak Dikenal',
         };
+    }
+
+    /**
+     * Penamaan keluaran proses tembak, contoh "Tembak MSK-202609-0001".
+     */
+    public function getCookLabelAttribute(): string
+    {
+        return $this->cook_code
+            ? 'Tembak '.$this->cook_code
+            : 'Tembak (tanpa kode masak)';
     }
 
     public function getCurrentDryingWeightAttribute(): float

@@ -82,7 +82,7 @@ class ProductionFinishingTest extends TestCase
         // Bahan asal membawa identitas branch dari proses tembak sebelumnya.
         MaterialBranch::create([
             'material_id' => $source->id,
-            'branch_code' => 'BR-202609-0001',
+            'branch_code' => 'MSK-202609-0001',
             'quantity' => 30.00,
             'source_type' => MaterialBranch::SOURCE_TEMBAK,
             'source_reference' => 'TBK-202609-0001',
@@ -108,13 +108,13 @@ class ProductionFinishingTest extends TestCase
         $this->assertSame(20.0, (float) $session->initial_weight);
         $this->assertSame(20.0, (float) $session->current_weight);
         // Branch bahan asal terbawa apa adanya karena hanya satu branch.
-        $this->assertSame('BR-202609-0001', $session->branch_code);
+        $this->assertSame('MSK-202609-0001', $session->branch_code);
         $this->assertFalse($session->branch_is_merged);
         $this->assertNotNull($session->signature_path);
         Storage::disk('public')->assertExists($session->signature_path);
         $this->assertDatabaseHas('material_branches', [
             'material_id' => $source->id,
-            'branch_code' => 'BR-202609-0001',
+            'branch_code' => 'MSK-202609-0001',
             'quantity' => 10.00,
         ]);
         $this->assertDatabaseHas('material_logs', [
@@ -188,7 +188,7 @@ class ProductionFinishingTest extends TestCase
         // Ampas tetap membawa identitas branch produksinya.
         $this->assertDatabaseHas('material_branches', [
             'material_id' => $wasteTarget->id,
-            'branch_code' => 'BR-202609-0001',
+            'branch_code' => 'MSK-202609-0001',
             'quantity' => 1.00,
             'source_type' => MaterialBranch::SOURCE_FINISHING,
         ]);
@@ -225,7 +225,7 @@ class ProductionFinishingTest extends TestCase
         $activeIndexResponse = $this->actingAs($this->productionUser)->get(route('production.finishings.index'));
         $activeIndexResponse->assertOk();
         $activeIndexResponse->assertSee($session->finishing_code);
-        $activeIndexResponse->assertSee('BR-202609-0001');
+        $activeIndexResponse->assertSee('MSK-202609-0001');
         $activeIndexResponse->assertSee('Sedang Finishing');
         $activeIndexResponse->assertSee('Terakhir Molen (Digiling Halus)');
 
@@ -234,7 +234,7 @@ class ProductionFinishingTest extends TestCase
         $inProgressResponse->assertSee('Catat Proses Finishing');
         $inProgressResponse->assertSee('Nyatakan Finishing Selesai');
         $inProgressResponse->assertSee('Riwayat Proses & Perpindahan', false);
-        $inProgressResponse->assertSee('BR-202609-0001');
+        $inProgressResponse->assertSee('MSK-202609-0001');
 
         $completeResponse = $this->actingAs($this->productionUser)->post(route('production.finishings.complete', $session), [
             'completed_date' => now()->toDateString(),
@@ -265,13 +265,13 @@ class ProductionFinishingTest extends TestCase
         $this->assertDatabaseHas('product_branches', [
             'id' => $session->product_branch_id,
             'product_id' => $product->id,
-            'branch_code' => 'BR-202609-0001',
+            'branch_code' => 'MSK-202609-0001',
             'quantity' => 17,
         ]);
 
         $showResponse = $this->actingAs($this->productionUser)->get(route('production.finishings.show', $session));
         $showResponse->assertOk();
-        $showResponse->assertSee('BR-202609-0001');
+        $showResponse->assertSee('MSK-202609-0001');
         $showResponse->assertSee('Gaharu Finishing Grade A');
         $showResponse->assertSee('Celup Metanol');
         $showResponse->assertSee('Bor (Dibentuk)');
@@ -423,13 +423,13 @@ class ProductionFinishingTest extends TestCase
 
         MaterialBranch::create([
             'material_id' => $source->id,
-            'branch_code' => 'BR-202609-0001',
+            'branch_code' => 'MSK-202609-0001',
             'quantity' => 12.00,
             'source_type' => MaterialBranch::SOURCE_TEMBAK,
         ]);
         MaterialBranch::create([
             'material_id' => $source->id,
-            'branch_code' => 'BR-202609-0002',
+            'branch_code' => 'MSK-202609-0002',
             'quantity' => 8.00,
             'source_type' => MaterialBranch::SOURCE_TEMBAK,
         ]);
@@ -445,23 +445,23 @@ class ProductionFinishingTest extends TestCase
 
         $this->assertTrue($session->branch_is_merged);
         $this->assertStringStartsWith('BRM-', (string) $session->branch_code);
-        $this->assertSame(['BR-202609-0001', 'BR-202609-0002'], $session->source_branch_codes);
+        $this->assertSame(['MSK-202609-0001', 'MSK-202609-0002'], $session->source_branch_codes);
         $this->assertStringContainsString('(Gabungan)', $session->branch_label);
 
         // Pemakaian 10 kg dibagi proporsional: 6 kg dari branch 0001, 4 kg dari 0002.
         $this->assertDatabaseHas('material_branches', [
             'material_id' => $source->id,
-            'branch_code' => 'BR-202609-0001',
+            'branch_code' => 'MSK-202609-0001',
             'quantity' => 6.00,
         ]);
         $this->assertDatabaseHas('material_branches', [
             'material_id' => $source->id,
-            'branch_code' => 'BR-202609-0002',
+            'branch_code' => 'MSK-202609-0002',
             'quantity' => 4.00,
         ]);
     }
 
-    public function test_tembak_batch_issues_a_branch_identity_that_reaches_the_warehouse(): void
+    public function test_tembak_batch_issues_a_kode_masak_that_reaches_the_warehouse(): void
     {
         $wood = Material::create([
             'code' => 'MAT-TBK-BR',
@@ -482,7 +482,7 @@ class ProductionFinishingTest extends TestCase
         $output = Material::create([
             'code' => 'MAT-OUT-BR',
             'name' => 'Hasil Tembak Branch',
-            'category' => 'Bahan Tembak',
+            'category' => Material::CATEGORY_TEMBAK_RESULT,
             'unit' => 'kg',
             'stock_quantity' => 0.00,
             'unit_cost' => 0,
@@ -497,8 +497,9 @@ class ProductionFinishingTest extends TestCase
         ]);
 
         $batch = ProductionTembakBatch::latest('id')->firstOrFail();
-        $this->assertNotNull($batch->branch_code);
-        $this->assertStringStartsWith('BR-', $batch->branch_code);
+        $this->assertNotNull($batch->cook_code);
+        $this->assertStringStartsWith('MSK-', $batch->cook_code);
+        $this->assertSame("Tembak {$batch->cook_code}", $batch->cook_label);
 
         $this->actingAs($this->productionUser)->post(route('production.tembaks.store-report', $batch), [
             'wet_result_weight' => 12.00,
@@ -518,13 +519,95 @@ class ProductionFinishingTest extends TestCase
             'output_material_id' => $output->id,
         ]);
 
-        // Hasil jemur masuk gudang sambil membawa identitas branch tembaknya.
+        // Hasil jemur masuk gudang sambil membawa kode masaknya.
         $this->assertDatabaseHas('material_branches', [
             'material_id' => $output->id,
-            'branch_code' => $batch->branch_code,
+            'branch_code' => $batch->cook_code,
             'quantity' => 11.00,
             'source_type' => MaterialBranch::SOURCE_TEMBAK,
         ]);
-        $this->assertSame($batch->branch_code, $output->fresh()->branch_label);
+        $this->assertSame($batch->cook_code, $output->fresh()->branch_label);
+
+        $cookLot = $output->fresh()->activeBranches()->firstOrFail();
+        $this->assertTrue($cookLot->isCookLot());
+        $this->assertSame("Tembak {$batch->cook_code}", $cookLot->lot_label);
+    }
+
+    public function test_tembak_output_must_land_in_the_dedicated_tembak_result_category(): void
+    {
+        $wood = Material::create([
+            'code' => 'MAT-TBK-CAT',
+            'name' => 'Kayu Tembak Kategori',
+            'category' => 'Bahan Tembak',
+            'unit' => 'kg',
+            'stock_quantity' => 20.00,
+            'unit_cost' => 200000,
+        ]);
+        $resin = Material::create([
+            'code' => 'MAT-RSN-CAT',
+            'name' => 'Resin Kategori',
+            'category' => 'Getah',
+            'unit' => 'kg',
+            'stock_quantity' => 6.00,
+            'unit_cost' => 900000,
+        ]);
+        // Tujuan salah: masih berkategori bahan mentah, bukan hasil tembak.
+        $wrongDestination = Material::create([
+            'code' => 'MAT-WRONG-CAT',
+            'name' => 'Bahan Mentah Bukan Hasil Tembak',
+            'category' => 'Bahan Sortir',
+            'unit' => 'kg',
+            'stock_quantity' => 0.00,
+            'unit_cost' => 0,
+        ]);
+        $tembakDate = now()->subDays(2)->toDateString();
+
+        $this->actingAs($this->productionUser)->post(route('production.tembaks.store'), [
+            'woods' => [['material_id' => $wood->id, 'weight' => 8.00]],
+            'resins' => [['material_id' => $resin->id, 'weight' => 2.00]],
+            'tembak_date' => $tembakDate,
+            'pic_name' => 'Operator Asep',
+        ]);
+
+        $batch = ProductionTembakBatch::latest('id')->firstOrFail();
+
+        $this->actingAs($this->productionUser)->post(route('production.tembaks.store-report', $batch), [
+            'wet_result_weight' => 9.00,
+            'residual_resin_weight' => 0,
+            'residual_destination_type' => 'none',
+            'report_date' => $tembakDate,
+            'report_pic_name' => 'Mandor Bambang',
+            'signature_data' => self::SIGNATURE_DATA,
+        ]);
+
+        $rejected = $this->actingAs($this->productionUser)->post(route('production.tembaks.store-drying-log', $batch), [
+            'weighed_date' => now()->toDateString(),
+            'new_weight' => 8.00,
+            'pic_name' => 'Mandor Bambang',
+            'is_completed' => true,
+            'destination_type' => 'existing',
+            'output_material_id' => $wrongDestination->id,
+        ]);
+
+        $rejected->assertSessionHasErrors('drying');
+        $this->assertSame(0.0, (float) $wrongDestination->fresh()->stock_quantity);
+        $this->assertSame(ProductionTembakBatch::STATUS_DRYING, $batch->fresh()->status);
+
+        // Barang baru otomatis masuk kategori khusus hasil tembak.
+        $accepted = $this->actingAs($this->productionUser)->post(route('production.tembaks.store-drying-log', $batch), [
+            'weighed_date' => now()->toDateString(),
+            'new_weight' => 8.00,
+            'pic_name' => 'Mandor Bambang',
+            'is_completed' => true,
+            'destination_type' => 'new',
+            'new_output_name' => 'Hasil Tembak Grade Kategori',
+            'new_output_code' => 'MAT-HASIL-CAT',
+        ]);
+
+        $accepted->assertSessionHasNoErrors();
+        $created = Material::where('code', 'MAT-HASIL-CAT')->firstOrFail();
+        $this->assertSame(Material::CATEGORY_TEMBAK_RESULT, $created->category);
+        $this->assertSame(8.0, (float) $created->stock_quantity);
+        $this->assertSame($batch->fresh()->cook_code, $created->branch_label);
     }
 }

@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Enums\UserRole;
 use App\Models\Product;
-use App\Models\ProductionBatch;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -66,12 +65,12 @@ class RoleAccessTest extends TestCase
         $res->assertDontSee('EK.DIV SUPER ROLE');
 
         $this->get('/production')->assertStatus(200);
-        $this->get('/stin')->assertStatus(200);
+        $this->get('/stin')->assertStatus(200)->assertSee('STIN');
         $this->get('/crm')->assertStatus(200);
         $this->get('/ecommerce')->assertStatus(200);
     }
 
-    public function test_stin_crm_ecommerce_modules_display_under_development_notice(): void
+    public function test_crm_and_ecommerce_modules_display_under_development_notice(): void
     {
         $superUser = User::factory()->create([
             'role' => UserRole::SUPER_ROLE,
@@ -79,10 +78,7 @@ class RoleAccessTest extends TestCase
 
         $this->actingAs($superUser);
 
-        $this->get('/stin')
-            ->assertStatus(200)
-            ->assertSee('Tahap Pengembangan')
-            ->assertSee('Divisi Khusus STIN');
+        $this->get('/stin')->assertStatus(200);
 
         $this->get('/crm')
             ->assertStatus(200)
@@ -162,40 +158,5 @@ class RoleAccessTest extends TestCase
             'id' => $prod->id,
             'name' => 'Produk Produksi Updated',
         ]);
-    }
-
-    public function test_sales_role_can_access_batch_detail_and_has_tambah_antrean_button(): void
-    {
-        $salesUser = User::factory()->create(['role' => UserRole::SALES]);
-        $product = Product::create([
-            'sku' => 'PRD-BATCH-001',
-            'name' => 'Produk Batch',
-            'price' => 10000,
-            'unit' => 'kg',
-            'stock_quantity' => 5,
-        ]);
-
-        $batch = ProductionBatch::create([
-            'batch_number' => 'BATCH-TEST-01',
-            'product_id' => $product->id,
-            'target_quantity' => 10,
-            'unit' => 'kg',
-            'status' => 'in_progress',
-            'stage' => 'Sortir',
-            'start_date' => '2026-09-01',
-            'pic_name' => 'Mandor',
-        ]);
-
-        $this->actingAs($salesUser);
-
-        // Can view antrean page with "+ Tambah Antrean"
-        $reqResponse = $this->get(route('production-requests.index'));
-        $reqResponse->assertStatus(200);
-        $reqResponse->assertSee('+ Tambah Antrean');
-        $reqResponse->assertSee('/production/batches/1');
-
-        // Can access /production/batches/1 (or $batch->id)
-        $batchResponse = $this->get('/production/batches/'.$batch->id);
-        $this->assertTrue(in_array($batchResponse->status(), [200, 302]));
     }
 }

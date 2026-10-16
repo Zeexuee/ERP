@@ -36,6 +36,34 @@
                 Bahan Mentah Asal & Tanggal
             </h3>
 
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                        Kode Batch
+                    </label>
+                    <input 
+                        type="text" 
+                        name="melt_code" 
+                        value="{{ old('melt_code') }}" 
+                        class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold uppercase" 
+                        required
+                        placeholder="Kode Batch"
+                    >
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">
+                        Tanggal Pencairan   
+                    </label>
+                    <input 
+                        type="date" 
+                        name="melt_date" 
+                        value="{{ old('melt_date', date('Y-m-d')) }}" 
+                        class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold" 
+                        required
+                    >
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">
@@ -68,16 +96,15 @@
                     </div>
                 </div>
 
-                <div>
+                <div class="hidden">
                     <label class="block text-xs font-bold text-slate-700 mb-1">
                         Tanggal
                     </label>
                     <input 
                         type="date" 
-                        name="melt_date" 
+                        name="melt_date_hidden" 
                         value="{{ old('melt_date', date('Y-m-d')) }}" 
                         class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold" 
-                        required
                     >
                 </div>
             </div>

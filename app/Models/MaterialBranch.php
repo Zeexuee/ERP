@@ -26,6 +26,22 @@ class MaterialBranch extends Model
         };
     }
 
+    /**
+     * Penamaan lot sesuai asalnya, contoh "Tembak MSK-202609-0001".
+     */
+    public function getLotLabelAttribute(): string
+    {
+        return $this->source_label.' '.$this->branch_code;
+    }
+
+    /**
+     * Lot ini lahir dari proses tembak sehingga kodenya adalah kode masak.
+     */
+    public function isCookLot(): bool
+    {
+        return $this->source_type === self::SOURCE_TEMBAK;
+    }
+
     protected $fillable = [
         'material_id',
         'branch_code',

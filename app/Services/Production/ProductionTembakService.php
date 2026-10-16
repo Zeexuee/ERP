@@ -63,11 +63,11 @@ class ProductionTembakService
                 }
 
                 $signaturePath = $this->saveSignature($data['signature_data'] ?? null, 'sig_tbk_init');
-                $tembakCode = $this->generateTembakCode();
+                $tembakCode = $data['tembak_code'];
 
                 $batch = ProductionTembakBatch::create([
                     'tembak_code' => $tembakCode,
-                    'branch_code' => $this->branchService->generateTembakBranchCode(),
+                    'cook_code' => $tembakCode,
                     'status' => ProductionTembakBatch::STATUS_IN_PROGRESS,
                     'tembak_date' => $data['tembak_date'],
                     'pic_name' => $data['pic_name'],
@@ -146,7 +146,7 @@ class ProductionTembakService
 
                     $this->branchService->recordStockIn(
                         $residualMaterial,
-                        $lockedBatch->branch_code,
+                        $lockedBatch->cook_code,
                         $residualResinWeight,
                         MaterialBranch::SOURCE_TEMBAK,
                         $lockedBatch->tembak_code,
@@ -240,17 +240,17 @@ class ProductionTembakService
 
             if ($isFinal) {
                 $outputUnitCost = $this->calculateOutputUnitCost($lockedBatch, $newWeight);
-                $outputMaterial = $this->resolveOutputMaterial($data, $outputUnitCost, $data['pic_name']);
+                $outputMaterial = $this->resolveOutputMaterial($outputUnitCost, $data['pic_name']);
 
                 $this->addStock($outputMaterial, $newWeight, $outputUnitCost, $data['pic_name']);
 
                 $this->branchService->recordStockIn(
                     $outputMaterial,
-                    $lockedBatch->branch_code,
+                    $lockedBatch->cook_code,
                     $newWeight,
                     MaterialBranch::SOURCE_TEMBAK,
                     $lockedBatch->tembak_code,
-                    "Hasil akhir jemur sesi tembak {$lockedBatch->tembak_code}."
+                    "{$lockedBatch->cook_label} dari sesi {$lockedBatch->tembak_code}."
                 );
 
                 MaterialLog::create([
@@ -260,9 +260,9 @@ class ProductionTembakService
                     'quantity' => $newWeight,
                     'unit' => $outputMaterial->unit,
                     'actor_by' => $data['pic_name'],
-                    'source_or_destination' => "Hasil Jemur Tembak #{$lockedBatch->tembak_code}",
+                    'source_or_destination' => $lockedBatch->cook_label,
                     'movement_date' => $weighedDate,
-                    'notes' => $data['notes'] ?? "Hasil akhir jemur dari sesi {$lockedBatch->tembak_code}.",
+                    'notes' => $data['notes'] ?? "{$lockedBatch->cook_label} masuk gudang dari sesi {$lockedBatch->tembak_code}.",
                 ]);
 
                 $lockedBatch->update([
@@ -384,35 +384,26 @@ class ProductionTembakService
         ]);
     }
 
-    /**
-     * @param  array<string, mixed>  $data
-     */
-    private function resolveOutputMaterial(array $data, float $unitCost, string $picName): Material
+    private function resolveOutputMaterial(float $unitCost, string $picName): Material
     {
-        if ($data['destination_type'] === 'existing') {
-            $material = Material::query()
-                ->lockForUpdate()
-                ->findOrFail($data['output_material_id']);
+        $material = Material::where('name', 'Hasil Tembak')
+            ->where('category', Material::CATEGORY_TEMBAK_RESULT)
+            ->first();
 
-            $this->ensureKilogramUnit($material);
-
-            return $material;
+        if (! $material) {
+            $material = Material::create([
+                'code' => 'HT-001',
+                'name' => 'Hasil Tembak',
+                'category' => Material::CATEGORY_TEMBAK_RESULT,
+                'unit' => 'kg',
+                'stock_quantity' => 0,
+                'minimum_stock' => 0,
+                'unit_cost' => $unitCost,
+                'last_weighed_by' => $picName,
+            ]);
         }
 
-        if ($data['destination_type'] !== 'new') {
-            throw new InvalidArgumentException('Pilihan barang baku tujuan tidak valid.');
-        }
-
-        return Material::create([
-            'code' => $this->resolveMaterialCode($data['new_output_code'] ?? null),
-            'name' => trim($data['new_output_name']),
-            'category' => 'Bahan Tembak',
-            'unit' => 'kg',
-            'stock_quantity' => 0,
-            'minimum_stock' => 0,
-            'unit_cost' => $unitCost,
-            'last_weighed_by' => $picName,
-        ]);
+        return $material;
     }
 
     private function addStock(Material $material, float $quantity, float $incomingUnitCost, string $picName): void
@@ -468,19 +459,6 @@ class ProductionTembakService
         if (Str::lower(trim($material->unit)) !== 'kg') {
             throw new InvalidArgumentException("Satuan barang {$material->name} harus kg agar dapat digabungkan dengan hasil proses tembak.");
         }
-    }
-
-    private function generateTembakCode(): string
-    {
-        $prefix = 'TBK-'.now()->format('Ym').'-';
-        $latestBatch = ProductionTembakBatch::query()
-            ->where('tembak_code', 'like', $prefix.'%')
-            ->orderByDesc('tembak_code')
-            ->lockForUpdate()
-            ->first();
-        $sequence = $latestBatch ? (int) Str::afterLast($latestBatch->tembak_code, '-') + 1 : 1;
-
-        return $prefix.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
     }
 
     private function resolveMaterialCode(?string $requestedCode): string

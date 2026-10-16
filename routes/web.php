@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CrmController;
 use App\Http\Controllers\CustomerController;
@@ -12,13 +13,15 @@ use App\Http\Controllers\Production\MaterialCarveController;
 use App\Http\Controllers\Production\MaterialController;
 use App\Http\Controllers\Production\MaterialMeltController;
 use App\Http\Controllers\Production\MaterialSortController;
-use App\Http\Controllers\Production\ProductionBatchController;
+use App\Http\Controllers\Production\ProductionColoringController;
 use App\Http\Controllers\Production\ProductionFinishingController;
 use App\Http\Controllers\Production\ProductionTembakController;
 use App\Http\Controllers\ProductionController;
 use App\Http\Controllers\ProductionRequestController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\StinController;
+use App\Http\Controllers\StinItemController;
+use App\Http\Controllers\StinScannerController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +40,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/', function () {
         /** @var User $user */
         $user = auth()->user();
+
+        if ($user && $user->role === UserRole::STIN) {
+            return redirect()->route('stin.dashboard');
+        }
 
         if ($user && $user->canAccessModule('sales')) {
             return app(DashboardController::class)->index();
@@ -84,6 +91,7 @@ Route::middleware('auth')->group(function () {
     // Modul Produksi (Pabrik & Manufaktur)
     Route::middleware('role:production')->prefix('production')->name('production.')->group(function () {
         Route::get('/', [ProductionController::class, 'dashboard'])->name('dashboard');
+        Route::get('kanban', [ProductionController::class, 'kanban'])->name('kanban');
         Route::patch('requests/{productionRequest}/status', [ProductionController::class, 'updateStatus'])->name('update-status');
 
         // Barang Gudang (Bahan Baku & Inventaris)
@@ -94,6 +102,11 @@ Route::middleware('auth')->group(function () {
         Route::post('materials/{material}/recount', [MaterialController::class, 'recountMaterial'])->name('materials.recount');
         Route::post('materials/{material}/sort', [MaterialController::class, 'sortMaterial'])->name('materials.sort');
         Route::post('materials/{material}/split', [MaterialController::class, 'sortMaterial'])->name('materials.split');
+        Route::get('dryings', [MaterialController::class, 'dryingIndex'])->name('dryings.index');
+        Route::get('dryings/create', [MaterialController::class, 'createDryingLog'])->name('dryings.create');
+        Route::post('dryings', [MaterialController::class, 'storeDryingLog'])->name('dryings.store');
+        Route::get('dryings/{log}/report', [MaterialController::class, 'showReportDryingLog'])->name('dryings.report.create');
+        Route::post('dryings/{log}/report', [MaterialController::class, 'reportDryingLog'])->name('dryings.report');
         Route::get('materials/receipt/create', [MaterialController::class, 'createReceipt'])->name('materials.create-receipt');
         Route::post('materials/receipt', [MaterialController::class, 'storeReceipt'])->name('materials.store-receipt');
 
@@ -128,6 +141,13 @@ Route::middleware('auth')->group(function () {
         Route::post('tembaks/{tembakBatch}/report', [ProductionTembakController::class, 'storeReport'])->name('tembaks.store-report')->whereNumber('tembakBatch');
         Route::post('tembaks/{tembakBatch}/drying-logs', [ProductionTembakController::class, 'storeDryingLog'])->name('tembaks.store-drying-log')->whereNumber('tembakBatch');
 
+        // Proses Celup dan Warna (Setelah Jemur Tembak)
+        Route::get('colorings', [ProductionColoringController::class, 'index'])->name('colorings.index');
+        Route::get('colorings/create', [ProductionColoringController::class, 'create'])->name('colorings.create');
+        Route::post('colorings', [ProductionColoringController::class, 'store'])->name('colorings.store');
+        Route::get('colorings/{coloringBatch}', [ProductionColoringController::class, 'show'])->name('colorings.show')->whereNumber('coloringBatch');
+        Route::post('colorings/{coloringBatch}/report', [ProductionColoringController::class, 'storeReport'])->name('colorings.store-report');
+
         // Proses Finishing (Celup / Molen / Kerok / Bor dengan urutan bebas -> Barang Jadi Siap Jual)
         Route::get('finishings', [ProductionFinishingController::class, 'index'])->name('finishings.index');
         Route::get('finishings/create', [ProductionFinishingController::class, 'create'])->name('finishings.create');
@@ -136,24 +156,21 @@ Route::middleware('auth')->group(function () {
         Route::post('finishings/{finishingSession}/steps', [ProductionFinishingController::class, 'storeStep'])->name('finishings.store-step')->whereNumber('finishingSession');
         Route::post('finishings/{finishingSession}/complete', [ProductionFinishingController::class, 'complete'])->name('finishings.complete')->whereNumber('finishingSession');
 
-        // Proses Produksi (Manufaktur & Laporan Harian)
-        Route::get('batches', [ProductionBatchController::class, 'index'])->name('batches.index');
-        Route::get('batches/create', [ProductionBatchController::class, 'create'])->name('batches.create');
-        Route::post('batches', [ProductionBatchController::class, 'store'])->name('batches.store');
-        Route::post('batches/{batch}/materials', [ProductionBatchController::class, 'addMaterial'])->name('batches.add-material');
-        Route::post('batches/{batch}/daily-logs', [ProductionBatchController::class, 'storeDailyLog'])->name('batches.store-log');
-        Route::post('batches/{batch}/complete', [ProductionBatchController::class, 'complete'])->name('batches.complete');
     });
-
-    // Detail Batch Produksi (Dapat diakses oleh Divisi Produksi dan Sales)
-    Route::middleware('role:production,sales')
-        ->get('production/batches/{batch}', [ProductionBatchController::class, 'show'])
-        ->whereNumber('batch')
-        ->name('production.batches.show');
 
     // Modul STIN (Divisi Khusus)
     Route::middleware('role:stin')->prefix('stin')->name('stin.')->group(function () {
         Route::get('/', [StinController::class, 'dashboard'])->name('dashboard');
+        Route::get('items', [StinItemController::class, 'index'])->name('items.index');
+        Route::get('items/create', [StinItemController::class, 'create'])->name('items.create');
+        Route::post('items', [StinItemController::class, 'store'])->name('items.store');
+        Route::get('items/{item}/edit', [StinItemController::class, 'edit'])->name('items.edit');
+        Route::put('items/{item}', [StinItemController::class, 'update'])->name('items.update');
+        Route::get('items/{item}/mutations', [StinItemController::class, 'mutations'])->name('items.mutations');
+        Route::get('items/{item}/print-sku', [StinItemController::class, 'printSku'])->name('items.print-sku');
+        Route::get('scanner', [StinScannerController::class, 'index'])->name('scanner.index');
+        Route::post('scanner/lookup', [StinScannerController::class, 'lookup'])->name('scanner.lookup');
+        Route::post('scanner/action', [StinScannerController::class, 'action'])->name('scanner.action');
     });
 
     // Modul CRM (Manajemen CRM)

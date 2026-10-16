@@ -23,6 +23,7 @@ class StoreTembakBatchRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'tembak_code' => ['required', 'string', 'max:100', 'unique:production_tembak_batches,tembak_code'],
             'woods' => ['required', 'array', 'min:1'],
             'woods.*.material_id' => ['required', 'exists:materials,id'],
             'woods.*.weight' => ['required', 'numeric', 'min:0.01'],
@@ -44,6 +45,8 @@ class StoreTembakBatchRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'tembak_code.required' => 'Kode batch wajib diisi.',
+            'tembak_code.unique' => 'Kode batch sudah digunakan.',
             'woods.required' => 'Bahan kayu wajib diisi.',
             'woods.min' => 'Pilih minimal satu bahan kayu.',
             'woods.*.material_id.required' => 'Pilih bahan kayu yang akan diproses tembak.',

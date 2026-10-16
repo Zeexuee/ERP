@@ -94,16 +94,41 @@
                                     </div>
 
                                     @if($p->branches->count() > 0)
+                                        @php $totalLotWeight = $p->total_weight; @endphp
+                                        @if($totalLotWeight > 0)
+                                            <div class="mb-4 p-4 rounded-2xl bg-slate-900 text-white">
+                                                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400 block">Rincian Asal Stok</span>
+                                                <p class="mt-1 text-sm font-bold leading-relaxed">
+                                                    {{ $p->name }} {{ number_format($totalLotWeight, 2, ',', '.') }} kg dengan rincian =
+                                                    <span class="font-mono">
+                                                        {{ $p->lotBreakdown()
+                                                            ->map(fn ($lot) => number_format($lot['weight'], 2, ',', '.').' kg dari '.$lot['code'])
+                                                            ->implode(', ') }}
+                                                    </span>
+                                                </p>
+                                            </div>
+                                        @endif
+
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             @foreach($p->branches as $branch)
                                                 <div class="p-4 rounded-2xl bg-white/80 border border-slate-900/10 shadow-sm space-y-2">
                                                     <div class="flex items-start justify-between gap-2">
                                                         <div>
                                                             <span class="font-mono font-extrabold text-sm text-slate-900 block tracking-wider">{{ $branch->branch_code ?: $branch->branch_name }}</span>
+                                                            @if(\Illuminate\Support\Str::startsWith((string) $branch->branch_code, 'MSK-'))
+                                                                <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-700">Kode Masak</span>
+                                                            @endif
                                                         </div>
-                                                        <span class="px-2.5 py-1 rounded-full text-xs font-mono font-extrabold badge-dark shrink-0">
-                                                            {{ $branch->quantity }} {{ $p->unit ?? 'unit' }}
-                                                        </span>
+                                                        <div class="text-right shrink-0">
+                                                            <span class="px-2.5 py-1 rounded-full text-xs font-mono font-extrabold badge-dark inline-block">
+                                                                {{ $branch->quantity }} {{ $p->unit ?? 'unit' }}
+                                                            </span>
+                                                            @if((float) $branch->weight > 0)
+                                                                <span class="mt-1 block font-mono text-[10px] font-bold text-slate-500">
+                                                                    {{ number_format($branch->weight, 2, ',', '.') }} kg
+                                                                </span>
+                                                            @endif
+                                                        </div>
                                                     </div>
 
                                                     <div class="pt-2 border-t border-slate-900/5">

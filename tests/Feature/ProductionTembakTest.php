@@ -58,7 +58,7 @@ class ProductionTembakTest extends TestCase
         $output = Material::create([
             'code' => 'MAT-RES-TBK-SP',
             'name' => 'Kayu Hasil Tembak SP',
-            'category' => 'Bahan Tembak',
+            'category' => Material::CATEGORY_TEMBAK_RESULT,
             'unit' => 'kg',
             'stock_quantity' => 0.00,
             'unit_cost' => 500000,
@@ -67,6 +67,7 @@ class ProductionTembakTest extends TestCase
         $tembakDate = now()->subDays(2)->toDateString();
 
         $initResponse = $this->actingAs($this->productionUser)->post(route('production.tembaks.store'), [
+            'tembak_code' => 'TBK-202609-0001',
             'woods' => [
                 ['material_id' => $wood->id, 'weight' => 15.00],
             ],
@@ -173,17 +174,19 @@ class ProductionTembakTest extends TestCase
             'pic_name' => 'Mandor Bambang',
             'notes' => 'Proses jemur selesai.',
             'is_completed' => true,
-            'destination_type' => 'existing',
-            'output_material_id' => $output->id,
         ]);
 
         $finalDryingResponse->assertRedirect(route('production.tembaks.show', $batch));
         $finalDryingResponse->assertSessionHasNoErrors();
         $batch->refresh();
+        $tembakResultMaterial = Material::where('name', 'Hasil Tembak')
+            ->where('category', Material::CATEGORY_TEMBAK_RESULT)
+            ->firstOrFail();
         $this->assertSame(ProductionTembakBatch::STATUS_COMPLETED, $batch->status);
         $this->assertSame(17.5, (float) $batch->dried_result_weight);
-        $this->assertSame($output->id, $batch->output_material_id);
-        $this->assertSame(17.5, (float) $output->fresh()->stock_quantity);
+        $this->assertSame($tembakResultMaterial->id, $batch->output_material_id);
+        $this->assertSame(17.5, (float) $tembakResultMaterial->stock_quantity);
+        $this->assertSame(0.0, (float) $output->fresh()->stock_quantity);
         $this->assertSame(2, $batch->dryingLogs()->count());
         $this->assertDatabaseHas('production_tembak_drying_logs', [
             'production_tembak_batch_id' => $batch->id,
@@ -193,7 +196,7 @@ class ProductionTembakTest extends TestCase
             'is_final' => true,
         ]);
         $this->assertDatabaseHas('material_logs', [
-            'material_id' => $output->id,
+            'material_id' => $tembakResultMaterial->id,
             'type' => 'in',
             'reference_number' => $batch->tembak_code,
             'quantity' => 17.50,
@@ -244,6 +247,7 @@ class ProductionTembakTest extends TestCase
         ]);
 
         $woodResponse = $this->actingAs($this->productionUser)->post(route('production.tembaks.store'), [
+            'tembak_code' => 'TBK-202609-8001',
             'woods' => [
                 ['material_id' => $wood->id, 'weight' => 10.00],
             ],
@@ -259,6 +263,7 @@ class ProductionTembakTest extends TestCase
         $this->assertSame(5.0, (float) $wood->fresh()->stock_quantity);
 
         $resinResponse = $this->actingAs($this->productionUser)->post(route('production.tembaks.store'), [
+            'tembak_code' => 'TBK-202609-8002',
             'woods' => [
                 ['material_id' => $wood->id, 'weight' => 3.00],
             ],

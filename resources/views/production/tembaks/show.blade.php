@@ -34,6 +34,11 @@
             <h2 class="text-xl font-bold text-slate-900 uppercase tracking-widest">
                 Sesi Tembak <span class="text-slate-500 font-mono">{{ $tembakBatch->tembak_code }}</span>
             </h2>
+            @if($tembakBatch->cook_code && $tembakBatch->cook_code !== $tembakBatch->tembak_code)
+                <span class="rounded-full border border-indigo-300 bg-indigo-50 px-2.5 py-1 font-mono text-[10px] font-bold text-indigo-900 uppercase tracking-widest">
+                    Kode Masak {{ $tembakBatch->cook_code }}
+                </span>
+            @endif
             <span class="rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest
                 {{ $tembakBatch->isCompleted()
                     ? 'border-slate-900 bg-slate-900 text-white'
@@ -394,38 +399,7 @@
                     </label>
 
                     <div id="completionPanel" class="hidden space-y-4 rounded-2xl border border-slate-900 bg-white p-4">
-                        <div>
-                            <label for="destination_type" class="mb-1 block text-[10px] font-bold text-slate-900 uppercase tracking-widest">Tujuan Barang Baku</label>
-                            <select id="destination_type" name="destination_type" class="apple-input w-full rounded-xl px-3 py-2 text-xs font-bold">
-                                <option value="">Pilih tujuan hasil jemur</option>
-                                <option value="existing" @selected(old('destination_type') === 'existing')>Tambahkan ke barang baku yang sudah ada</option>
-                                <option value="new" @selected(old('destination_type') === 'new')>Tambahkan sebagai barang baku baru</option>
-                            </select>
-                        </div>
-
-                        <div id="outputExistingPanel" class="hidden">
-                            <label for="output_material_id" class="mb-1 block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Pilih Barang Baku Gudang</label>
-                            <select id="output_material_id" name="output_material_id" class="apple-input w-full rounded-xl px-3 py-2 text-xs font-bold">
-                                <option value="">Pilih barang baku</option>
-                                @foreach($outputMaterials as $material)
-                                    <option value="{{ $material->id }}" @selected((string) old('output_material_id') === (string) $material->id)>
-                                        [{{ $material->code }}] {{ $material->name }} — {{ number_format($material->stock_quantity, 2) }} kg
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div id="outputNewPanel" class="hidden grid-cols-1 gap-4 sm:grid-cols-2">
-                            <div>
-                                <label for="new_output_name" class="mb-1 block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nama Barang Baku Baru</label>
-                                <input id="new_output_name" type="text" name="new_output_name" value="{{ old('new_output_name') }}" maxlength="255" class="apple-input w-full rounded-xl px-3 py-2 text-xs font-bold" placeholder="Nama hasil tembak kering">
-                            </div>
-                            <div>
-                                <label for="new_output_code" class="mb-1 block text-[10px] font-bold text-slate-500 uppercase tracking-widest">Kode Barang (Opsional)</label>
-                                <input id="new_output_code" type="text" name="new_output_code" value="{{ old('new_output_code') }}" maxlength="50" class="apple-input w-full rounded-xl px-3 py-2 font-mono text-xs font-bold uppercase" placeholder="Otomatis bila kosong">
-                            </div>
-                            <div class="sm:col-span-2 text-[10px] font-bold text-slate-500">Jenis barang otomatis <span class="text-slate-900">Bahan Tembak</span>, satuan <span class="text-slate-900">kg</span>.</div>
-                        </div>
+                        <p class="text-xs font-bold text-slate-700">Hasil tembak ini akan otomatis disimpan ke dalam barang gudang dengan nama <span class="text-slate-900 uppercase tracking-widest">Hasil Tembak</span> sebagai branch <span class="text-indigo-700 font-mono">{{ $tembakBatch->cook_code }}</span>.</p>
                     </div>
 
                     <div class="flex justify-end">
@@ -632,43 +606,13 @@
 
         const completionCheckbox = document.getElementById('isCompleted');
         const completionPanel = document.getElementById('completionPanel');
-        const destinationType = document.getElementById('destination_type');
-        const outputExistingPanel = document.getElementById('outputExistingPanel');
-        const outputNewPanel = document.getElementById('outputNewPanel');
-        const outputMaterial = document.getElementById('output_material_id');
-        const newOutputName = document.getElementById('new_output_name');
-
-        const updateOutputPanels = () => {
-            if (!destinationType) {
-                return;
-            }
-
-            const isCompleting = completionCheckbox?.checked ?? false;
-            const showExisting = isCompleting && destinationType.value === 'existing';
-            const showNew = isCompleting && destinationType.value === 'new';
-            outputExistingPanel?.classList.toggle('hidden', !showExisting);
-            outputNewPanel?.classList.toggle('hidden', !showNew);
-            outputNewPanel?.classList.toggle('grid', showNew);
-
-            destinationType.required = isCompleting;
-
-            if (outputMaterial) {
-                outputMaterial.required = showExisting;
-            }
-
-            if (newOutputName) {
-                newOutputName.required = showNew;
-            }
-        };
 
         const updateCompletionPanel = () => {
             const isCompleting = completionCheckbox?.checked ?? false;
             completionPanel?.classList.toggle('hidden', !isCompleting);
-            updateOutputPanels();
         };
 
         completionCheckbox?.addEventListener('change', updateCompletionPanel);
-        destinationType?.addEventListener('change', updateOutputPanels);
         updateCompletionPanel();
     });
 </script>

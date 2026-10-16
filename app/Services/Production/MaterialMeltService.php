@@ -23,7 +23,7 @@ class MaterialMeltService
                 throw new \InvalidArgumentException("Stok {$sourceMaterial->name} tidak mencukupi. Tersedia: {$sourceMaterial->stock_quantity} {$sourceMaterial->unit}");
             }
 
-            $meltCode = $this->generateMeltCode();
+            $meltCode = $data['melt_code'];
 
             // Kurangi stok bahan mentah (Getah Padat)
             $sourceMaterial->decrement('stock_quantity', $data['initial_weight']);
@@ -187,25 +187,5 @@ class MaterialMeltService
                 'status' => 'completed',
             ]);
         });
-    }
-
-    /**
-     * Hasilkan kode unik pencairan MLT-YYYYMMDD-XXXX
-     */
-    private function generateMeltCode(): string
-    {
-        $datePrefix = 'MLT-'.date('Ymd').'-';
-        $latest = MaterialMeltBatch::where('melt_code', 'like', $datePrefix.'%')
-            ->orderBy('melt_code', 'desc')
-            ->first();
-
-        if (! $latest) {
-            return $datePrefix.'0001';
-        }
-
-        $sequence = (int) substr($latest->melt_code, -4);
-        $nextSequence = str_pad((string) ($sequence + 1), 4, '0', STR_PAD_LEFT);
-
-        return $datePrefix.$nextSequence;
     }
 }

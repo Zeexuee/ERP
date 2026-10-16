@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Production;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Production\RecountMaterialRequest;
+use App\Http\Requests\Production\ReportMaterialDryingLogRequest;
 use App\Http\Requests\Production\SortMaterialRequest;
+use App\Http\Requests\Production\StoreMaterialDryingLogRequest;
 use App\Http\Requests\Production\StoreMaterialReceiptRequest;
 use App\Http\Requests\Production\StoreMaterialRequest;
 use App\Http\Requests\Production\UpdateMaterialRequest;
 use App\Models\Material;
+use App\Models\MaterialDryingLog;
 use App\Models\MaterialLog;
 use App\Models\MaterialReceipt;
 use App\Services\ExcelImportExportService;
@@ -164,5 +167,93 @@ class MaterialController extends Controller
     public function exportLogs(ExcelImportExportService $excelService): StreamedResponse
     {
         return $excelService->exportMaterialLogs();
+    }
+
+    /**
+     * Halaman inisiasi jemur bahan baku.
+     */
+    public function createDryingLog(Request $request)
+    {
+        $materialId = $request->input('material_id');
+        $material = Material::find($materialId);
+
+        if (! $material) {
+            return redirect()->route('production.dryings.index')->withErrors('Bahan baku tidak ditemukan atau belum dipilih.');
+        }
+
+        return view('production.dryings.create', compact('material'));
+    }
+
+    /**
+     * Inisiasi proses jemur bahan baku di gudang.
+     */
+    public function storeDryingLog(StoreMaterialDryingLogRequest $request, MaterialService $materialService): RedirectResponse
+    {
+        $data = $request->validated();
+        $material = Material::findOrFail($data['material_id']);
+
+        $materialService->initiateDryingLog($material, $data);
+
+        return redirect()->route('production.dryings.index')
+            ->with('success', "Proses jemur bahan baku [{$material->code}] {$material->name} berhasil diinisiasi.");
+    }
+
+    /**
+     * Halaman laporan selesai jemur bahan baku.
+     */
+    public function showReportDryingLog(MaterialDryingLog $log): View
+    {
+        $log->load('material');
+
+        return view('production.dryings.report', compact('log'));
+    }
+
+    /**
+     * Laporan selesai proses jemur bahan baku di gudang.
+     */
+    public function reportDryingLog(ReportMaterialDryingLogRequest $request, MaterialDryingLog $log, MaterialService $materialService): RedirectResponse
+    {
+        try {
+            $log = $materialService->reportDryingLog($log, $request->validated());
+            $material = $log->material;
+            $shrinkage = number_format($log->shrinkage_weight, 2);
+
+            return redirect()->route('production.dryings.index')
+                ->with('success', "Laporan jemur bahan baku [{$material->code}] {$material->name} berhasil dicatat. Penyusutan: {$shrinkage} {$material->unit}. Stok saat ini: {$log->new_weight} {$material->unit}.");
+        } catch (\InvalidArgumentException $e) {
+            return back()->withErrors(['new_weight' => $e->getMessage()])->withInput();
+        }
+    }
+
+    /**
+     * Halaman daftar proses jemur bahan baku gudang.
+     */
+    public function dryingIndex(Request $request): View
+    {
+        $materials = Material::where('stock_quantity', '>', 0)
+            ->whereIn('category', ['Bahan Sortir', 'Hasil Sortir'])
+            ->orderBy('name')
+            ->get();
+
+        $query = MaterialDryingLog::with('material')->latest('id');
+
+        if ($search = $request->input('search')) {
+            $query->whereHas('material', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
+            });
+        }
+
+        $logs = $query->paginate(20)->withQueryString();
+
+        $totalDryingLogs = MaterialDryingLog::count();
+        $totalShrinkage = MaterialDryingLog::sum('shrinkage_weight');
+
+        return view('production.dryings.index', compact(
+            'materials',
+            'logs',
+            'totalDryingLogs',
+            'totalShrinkage'
+        ));
     }
 }
