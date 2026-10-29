@@ -3,10 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\WarehouseLoanStatus;
-use App\Models\Customer;
-use App\Models\Product;
-use App\Models\ProductionRequest;
-use App\Models\SalesOrder;
 use App\Models\WarehouseItem;
 use App\Models\WarehouseLoan;
 use App\Models\WarehouseLoanItem;
@@ -22,17 +18,13 @@ class StinController extends Controller
     {
         $user = auth()->user();
 
-        // 1. Data Ringkasan Utama & Operasional
+        // 1. Data Ringkasan Utama & Operasional Gudang STIN
         $totalItems = WarehouseItem::count();
         $totalStockUnits = (int) WarehouseItem::sum('current_stock');
         $totalInventoryValue = (float) (WarehouseItem::selectRaw('COALESCE(SUM(current_stock * unit_price), 0) as val')->value('val') ?? 0);
         $lowStockCount = WarehouseItem::whereColumn('current_stock', '<=', 'min_stock')->count();
 
         $stats = [
-            'total_sales_orders' => SalesOrder::count(),
-            'total_customers' => Customer::count(),
-            'total_products' => Product::count(),
-            'total_production_requests' => ProductionRequest::count(),
             'total_items' => $totalItems,
             'total_stock_units' => $totalStockUnits,
             'total_inventory_value' => $totalInventoryValue,

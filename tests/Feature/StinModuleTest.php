@@ -26,10 +26,12 @@ class StinModuleTest extends TestCase
         $response->assertOk();
         $response->assertSee('STIN');
         $response->assertSee('Dashboard');
-        $response->assertSee('Pelanggan');
-        $response->assertSee('Pesanan');
+        $response->assertSee('Item Terdaftar');
+        $response->assertSee('Total Stok Fisik');
 
-        // Verify that chatty text, Divisi STIN nav, and old warehouse clutter are completely absent
+        // Verify that removed text and clutter are absent
+        $response->assertDontSee('Sistem Logistik Aktif');
+        $response->assertDontSee('Peringatan Batas Minimum');
         $response->assertDontSee('Divisi STIN');
         $response->assertDontSee('Selamat datang kembali');
         $response->assertDontSee('Pusat Kendali Divisi STIN');

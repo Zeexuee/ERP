@@ -6,13 +6,7 @@
     <!-- Header Section (Iconless) -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <div class="flex items-center gap-3">
-                <h2 class="text-2xl font-black tracking-tight text-slate-900">STIN</h2>
-                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Sistem Logistik Aktif
-                </span>
-            </div>
+            <h2 class="text-2xl font-black tracking-tight text-slate-900">STIN</h2>
             <p class="text-xs text-slate-500 font-medium mt-1">
                 Dashboard monitoring inventaris gudang, pemantauan mutasi stok real-time, dan status operasional.
             </p>
@@ -39,32 +33,8 @@
     </div>
 
     <!-- Top KPI Metrics (Iconless) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <!-- Card 1: Pelanggan -->
-        <div class="p-5 rounded-2xl apple-glass-card hover:shadow-md transition">
-            <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Pelanggan</span>
-                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">Mitra</span>
-            </div>
-            <div class="text-2xl font-black text-slate-900 mt-2">
-                {{ number_format($stats['total_customers'] ?? 0) }}
-            </div>
-            <span class="text-[11px] font-medium text-slate-500 block mt-0.5">Klien & Mitra Aktif</span>
-        </div>
-
-        <!-- Card 2: Pesanan -->
-        <div class="p-5 rounded-2xl apple-glass-card hover:shadow-md transition">
-            <div class="flex items-center justify-between">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Pesanan</span>
-                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600">Total</span>
-            </div>
-            <div class="text-2xl font-black text-slate-900 mt-2">
-                {{ number_format($stats['total_sales_orders'] ?? 0) }}
-            </div>
-            <span class="text-[11px] font-medium text-slate-500 block mt-0.5">Total Pesanan Terdata</span>
-        </div>
-
-        <!-- Card 3: Total SKU Terdaftar -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <!-- Card 1: Total SKU Terdaftar -->
         <div class="p-5 rounded-2xl apple-glass-card hover:shadow-md transition">
             <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Item Terdaftar</span>
@@ -76,7 +46,7 @@
             <span class="text-[11px] font-medium text-slate-500 block mt-0.5">Varian SKU Gudang</span>
         </div>
 
-        <!-- Card 4: Total Stok Fisik -->
+        <!-- Card 2: Total Stok Fisik -->
         <div class="p-5 rounded-2xl apple-glass-card hover:shadow-md transition">
             <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Stok Fisik</span>
@@ -88,7 +58,7 @@
             <span class="text-[11px] font-medium text-slate-500 block mt-0.5">Akumulasi Unit Fisik</span>
         </div>
 
-        <!-- Card 5: Nilai Estimasi Inventaris -->
+        <!-- Card 3: Nilai Estimasi Inventaris -->
         <div class="p-5 rounded-2xl apple-glass-card hover:shadow-md transition">
             <div class="flex items-center justify-between">
                 <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">Nilai Aset Stok</span>
@@ -102,19 +72,7 @@
     </div>
 
     <!-- Alert / Mini Stat Bar (Iconless) -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- Status Stok Menipis -->
-        <div class="p-4 rounded-2xl apple-glass-card flex items-center justify-between">
-            <div>
-                <h4 class="text-xs font-bold text-slate-900">Peringatan Batas Minimum</h4>
-                <p class="text-[11px] text-slate-500 mt-0.5">
-                    {{ ($stats['low_stock_count'] ?? 0) > 0 ? ($stats['low_stock_count'] . ' item di bawah batas min') : 'Semua item dalam batas aman' }}
-                </p>
-            </div>
-            <span class="px-2.5 py-1 rounded-full text-xs font-extrabold {{ ($stats['low_stock_count'] ?? 0) > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800' }}">
-                {{ $stats['low_stock_count'] ?? 0 }} Item
-            </span>
-        </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
         <!-- Status Barang Dipinjam -->
         <a href="{{ route('stin.loans.index') }}" class="p-4 rounded-2xl apple-glass-card flex items-center justify-between hover:shadow-xs transition group">
