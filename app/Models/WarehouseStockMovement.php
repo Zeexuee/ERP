@@ -36,7 +36,7 @@ class WarehouseStockMovement extends Model
 
     public function item(): BelongsTo
     {
-        return $this->belongsTo(WarehouseItem::class, 'warehouse_item_id');
+        return $this->belongsTo(WarehouseItem::class, 'warehouse_item_id')->withTrashed();
     }
 
     public function branch(): BelongsTo

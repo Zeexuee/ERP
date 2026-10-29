@@ -21,6 +21,8 @@ use App\Http\Controllers\ProductionRequestController;
 use App\Http\Controllers\SalesOrderController;
 use App\Http\Controllers\StinController;
 use App\Http\Controllers\StinItemController;
+use App\Http\Controllers\StinLoanController;
+use App\Http\Controllers\StinMutationController;
 use App\Http\Controllers\StinScannerController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
@@ -167,10 +169,21 @@ Route::middleware('auth')->group(function () {
         Route::get('items/{item}/edit', [StinItemController::class, 'edit'])->name('items.edit');
         Route::put('items/{item}', [StinItemController::class, 'update'])->name('items.update');
         Route::get('items/{item}/mutations', [StinItemController::class, 'mutations'])->name('items.mutations');
+        Route::get('items/{item}/mutations/export', [StinItemController::class, 'exportItemMutations'])->name('items.mutations.export');
+        Route::get('mutations', [StinMutationController::class, 'index'])->name('mutations.index');
+        Route::get('mutations/export', [StinMutationController::class, 'export'])->name('mutations.export');
+        Route::get('mutations/{movement}', [StinMutationController::class, 'show'])->name('mutations.show');
         Route::get('items/{item}/print-sku', [StinItemController::class, 'printSku'])->name('items.print-sku');
         Route::get('scanner', [StinScannerController::class, 'index'])->name('scanner.index');
         Route::post('scanner/lookup', [StinScannerController::class, 'lookup'])->name('scanner.lookup');
         Route::post('scanner/action', [StinScannerController::class, 'action'])->name('scanner.action');
+        Route::post('scanner/batch-action', [StinScannerController::class, 'batchAction'])->name('scanner.batch-action');
+        Route::get('loans', [StinLoanController::class, 'index'])->name('loans.index');
+        Route::get('loans/create', [StinLoanController::class, 'create'])->name('loans.create');
+        Route::post('loans', [StinLoanController::class, 'store'])->name('loans.store');
+        Route::get('loans/{loan}', [StinLoanController::class, 'show'])->name('loans.show');
+        Route::get('loans/{loan}/return', [StinLoanController::class, 'returnForm'])->name('loans.return');
+        Route::post('loans/{loan}/return', [StinLoanController::class, 'processReturn'])->name('loans.return.process');
     });
 
     // Modul CRM (Manajemen CRM)

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\WarehouseLoanStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -90,6 +91,21 @@ class WarehouseItem extends Model
     public function stockAdjustments(): HasMany
     {
         return $this->hasMany(WarehouseStockAdjustment::class);
+    }
+
+    public function loanItems(): HasMany
+    {
+        return $this->hasMany(WarehouseLoanItem::class);
+    }
+
+    public function currentlyLoanedQuantity(): int
+    {
+        return (int) $this->loanItems()
+            ->whereHas('loan', function ($q) {
+                $q->whereIn('status', [WarehouseLoanStatus::BORROWED->value, WarehouseLoanStatus::PARTIAL->value]);
+            })
+            ->selectRaw('COALESCE(SUM(quantity_loaned - quantity_returned), 0) as remaining')
+            ->value('remaining');
     }
 
     public function isLowStock(): bool

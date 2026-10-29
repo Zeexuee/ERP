@@ -6,6 +6,8 @@ use App\Models\WarehouseItem;
 use App\Models\WarehouseStockMovement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class StinScannerController extends Controller
@@ -86,6 +88,7 @@ class StinScannerController extends Controller
                 'barcode' => $item->barcode,
                 'category' => $item->category ?? '-',
                 'current_stock' => $item->current_stock,
+                'currently_loaned' => $item->currentlyLoanedQuantity(),
                 'unit' => $item->unit ?? 'pcs',
                 'unit_price' => (float) $item->unit_price,
                 'formatted_price' => 'Rp '.number_format($item->unit_price, 0, ',', '.'),
@@ -108,6 +111,8 @@ class StinScannerController extends Controller
             'quantity' => ['required', 'integer', 'min:1'],
             'notes' => ['nullable', 'string', 'max:500'],
             'pic_name' => ['nullable', 'string', 'max:100'],
+            'signature' => ['nullable', 'string'],
+            'signature_data' => ['nullable', 'string'],
         ]);
 
         /** @var WarehouseItem $item */
@@ -117,7 +122,18 @@ class StinScannerController extends Controller
         $notes = $request->input('notes') ?: ($actionType === 'in' ? 'Stok masuk via scanner' : 'Stok keluar via scanner');
         $picName = $request->filled('pic_name')
             ? $request->string('pic_name')->trim()->value()
-            : (auth()->user()?->name ?? 'Petugas STIN');
+            : null;
+
+        $rawSignature = $request->input('signature_data') ?: $request->input('signature');
+        $signaturePath = null;
+        if (! empty($rawSignature) && str_contains($rawSignature, 'base64,')) {
+            $base64Data = explode('base64,', $rawSignature)[1] ?? null;
+            if ($base64Data) {
+                $fileName = 'signatures/sig_wh_'.uniqid().'_'.time().'.png';
+                Storage::disk('public')->put($fileName, base64_decode($base64Data));
+                $signaturePath = $fileName;
+            }
+        }
 
         if ($actionType === 'out') {
             if ($qty > $item->current_stock) {
@@ -130,7 +146,8 @@ class StinScannerController extends Controller
             $item->removeStock(
                 quantity: $qty,
                 notes: $notes,
-                picName: $picName
+                picName: $picName,
+                signaturePath: $signaturePath
             );
 
             $message = "Stok keluar berhasil: -{$qty} {$item->unit} ({$item->name}).";
@@ -138,7 +155,8 @@ class StinScannerController extends Controller
             $item->addStock(
                 quantity: $qty,
                 notes: $notes,
-                picName: $picName
+                picName: $picName,
+                signaturePath: $signaturePath
             );
 
             $message = "Stok masuk berhasil: +{$qty} {$item->unit} ({$item->name}).";
@@ -164,8 +182,114 @@ class StinScannerController extends Controller
                 'quantity' => $qty,
                 'current_stock' => $item->current_stock,
                 'unit' => $item->unit ?? 'pcs',
-                'pic_name' => $picName,
+                'pic_name' => $picName ?: '-',
             ],
         ]);
+    }
+
+    /**
+     * Proses batch mutasi stok untuk daftar barang sekaligus (Daftar Antrean / Cart Out).
+     */
+    public function batchAction(Request $request): JsonResponse
+    {
+        $request->validate([
+            'action_type' => ['required', 'in:in,out'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.warehouse_item_id' => ['required', 'exists:warehouse_items,id'],
+            'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'notes' => ['nullable', 'string', 'max:500'],
+            'pic_name' => ['nullable', 'string', 'max:100'],
+            'signature' => ['nullable', 'string'],
+            'signature_data' => ['nullable', 'string'],
+        ]);
+
+        $actionType = $request->input('action_type');
+        $notes = $request->input('notes') ?: ($actionType === 'in' ? 'Stok masuk via batch scanner' : 'Stok keluar via batch scanner');
+        $picName = $request->filled('pic_name')
+            ? $request->string('pic_name')->trim()->value()
+            : null;
+
+        $rawSignature = $request->input('signature_data') ?: $request->input('signature');
+        $signaturePath = null;
+        if (! empty($rawSignature) && str_contains($rawSignature, 'base64,')) {
+            $base64Data = explode('base64,', $rawSignature)[1] ?? null;
+            if ($base64Data) {
+                $fileName = 'signatures/sig_wh_'.uniqid().'_'.time().'.png';
+                Storage::disk('public')->put($fileName, base64_decode($base64Data));
+                $signaturePath = $fileName;
+            }
+        }
+
+        $itemsPayload = $request->input('items');
+
+        try {
+            $processed = DB::transaction(function () use ($itemsPayload, $actionType, $notes, $picName, $signaturePath) {
+                $results = [];
+
+                foreach ($itemsPayload as $entry) {
+                    /** @var WarehouseItem $item */
+                    $item = WarehouseItem::lockForUpdate()->findOrFail($entry['warehouse_item_id']);
+                    $qty = (int) $entry['quantity'];
+
+                    if ($actionType === 'out') {
+                        if ($qty > $item->current_stock) {
+                            throw new \Exception("Stok barang '{$item->name}' tidak mencukupi. Tersedia: {$item->current_stock} {$item->unit}, diminta: {$qty} {$item->unit}.");
+                        }
+
+                        $item->removeStock(
+                            quantity: $qty,
+                            notes: $notes,
+                            picName: $picName,
+                            signaturePath: $signaturePath
+                        );
+                    } else {
+                        $item->addStock(
+                            quantity: $qty,
+                            notes: $notes,
+                            picName: $picName,
+                            signaturePath: $signaturePath
+                        );
+                    }
+
+                    $item->refresh();
+
+                    $results[] = [
+                        'id' => $item->id,
+                        'name' => $item->name,
+                        'sku' => $item->sku,
+                        'quantity' => $qty,
+                        'current_stock' => $item->current_stock,
+                        'unit' => $item->unit ?? 'pcs',
+                    ];
+                }
+
+                return $results;
+            });
+
+            $totalQty = array_sum(array_column($processed, 'quantity'));
+            $itemCount = count($processed);
+            $actionLabel = $actionType === 'in' ? 'masuk' : 'keluar';
+
+            return response()->json([
+                'success' => true,
+                'message' => "Berhasil memproses {$itemCount} jenis barang (total: {$totalQty} {$actionLabel}).",
+                'processed_items' => $processed,
+                'log' => [
+                    'time' => now()->timezone('Asia/Jakarta')->format('H:i:s'),
+                    'sku' => "BATCH ({$itemCount} ITEM)",
+                    'name' => "Pengeluaran {$itemCount} jenis produk ({$totalQty} pcs)",
+                    'action_type' => $actionType,
+                    'quantity' => $totalQty,
+                    'current_stock' => '-',
+                    'unit' => 'pcs',
+                    'pic_name' => $picName ?: '-',
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 }

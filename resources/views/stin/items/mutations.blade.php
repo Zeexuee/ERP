@@ -4,11 +4,17 @@
 <div class="space-y-6">
 
     <!-- Header & Back Button -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h2 class="text-xl font-bold text-slate-900">Mutasi Stok — {{ $item->name }}</h2>
+            <div class="text-xs text-slate-500 font-medium mt-0.5">
+                Riwayat pergerakan stok masuk, keluar, dan penyesuaian barang.
+            </div>
         </div>
         <div class="flex items-center gap-2">
+            <a href="{{ route('stin.items.mutations.export', $item) }}" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-sm transition" title="Unduh mutasi barang ini ke Excel">
+                Export to Excel
+            </a>
             <a href="{{ route('stin.items.print-sku', $item) }}" class="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-sm transition">
                 Print SKU
             </a>

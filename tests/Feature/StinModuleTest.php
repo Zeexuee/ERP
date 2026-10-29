@@ -6,7 +6,9 @@ use App\Enums\UserRole;
 use App\Models\User;
 use App\Models\WarehouseBranch;
 use App\Models\WarehouseItem;
+use App\Models\WarehouseStockMovement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class StinModuleTest extends TestCase
@@ -676,7 +678,25 @@ class StinModuleTest extends TestCase
         ]);
         $this->assertEquals(25, $item->fresh()->current_stock);
 
-        // 3. Stock Out exceeds available stock
+        // 3. Stock Out without pic_name (null default)
+        $resNoPic = $this->actingAs($user)->postJson(route('stin.scanner.action'), [
+            'warehouse_item_id' => $item->id,
+            'action_type' => 'out',
+            'quantity' => 2,
+        ]);
+        $resNoPic->assertOk();
+        $resNoPic->assertJson([
+            'success' => true,
+            'item' => [
+                'current_stock' => 23,
+            ],
+            'log' => [
+                'pic_name' => '-',
+            ],
+        ]);
+        $this->assertEquals(23, $item->fresh()->current_stock);
+
+        // 4. Stock Out exceeds available stock
         $resExcess = $this->actingAs($user)->postJson(route('stin.scanner.action'), [
             'warehouse_item_id' => $item->id,
             'action_type' => 'out',
@@ -687,7 +707,108 @@ class StinModuleTest extends TestCase
         $resExcess->assertJson([
             'success' => false,
         ]);
-        $this->assertEquals(25, $item->fresh()->current_stock);
+        $this->assertEquals(23, $item->fresh()->current_stock);
+    }
+
+    public function test_stin_user_can_perform_batch_stock_out_via_scanner(): void
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::STIN,
+            'name' => 'Operator Gudang STIN',
+        ]);
+
+        $branch = WarehouseBranch::create([
+            'code' => 'BR_BATCH_WH',
+            'name' => 'Gudang Batch STIN',
+            'is_active' => true,
+        ]);
+
+        $itemA = WarehouseItem::create([
+            'warehouse_branch_id' => $branch->id,
+            'sku' => 'SKU-BATCH-A',
+            'barcode' => 'BAR-BATCH-A',
+            'name' => 'Bahan Baku Keramik A',
+            'unit' => 'pcs',
+            'current_stock' => 50,
+            'min_stock' => 5,
+            'unit_price' => 20000,
+            'is_active' => true,
+        ]);
+
+        $itemB = WarehouseItem::create([
+            'warehouse_branch_id' => $branch->id,
+            'sku' => 'SKU-BATCH-B',
+            'barcode' => 'BAR-BATCH-B',
+            'name' => 'Bahan Baku Keramik B',
+            'unit' => 'dus',
+            'current_stock' => 100,
+            'min_stock' => 10,
+            'unit_price' => 50000,
+            'is_active' => true,
+        ]);
+
+        $response = $this->actingAs($user)->postJson(route('stin.scanner.batch-action'), [
+            'action_type' => 'out',
+            'items' => [
+                ['warehouse_item_id' => $itemA->id, 'quantity' => 15],
+                ['warehouse_item_id' => $itemB->id, 'quantity' => 30],
+            ],
+            'notes' => 'Pengeluaran Batch Surat Jalan #SJ-2026-001',
+            'pic_name' => 'Pak Budi',
+        ]);
+
+        $response->assertOk();
+        $response->assertJson([
+            'success' => true,
+        ]);
+
+        $this->assertEquals(35, $itemA->fresh()->current_stock);
+        $this->assertEquals(70, $itemB->fresh()->current_stock);
+    }
+
+    public function test_stin_user_can_perform_batch_stock_out_with_digital_signature(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create([
+            'role' => UserRole::STIN,
+        ]);
+
+        $branch = WarehouseBranch::firstOrCreate(['code' => 'STIN'], [
+            'name' => 'Gudang STIN',
+            'is_active' => true,
+        ]);
+
+        $item = WarehouseItem::create([
+            'warehouse_branch_id' => $branch->id,
+            'sku' => 'MAT-SIG-001',
+            'name' => 'Produk Dengan Tanda Tangan',
+            'unit' => 'pcs',
+            'current_stock' => 50,
+            'min_stock' => 5,
+            'unit_price' => 10000,
+            'is_active' => true,
+        ]);
+
+        $fakeSignature = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+
+        $response = $this->actingAs($user)->postJson(route('stin.scanner.batch-action'), [
+            'action_type' => 'out',
+            'items' => [
+                ['warehouse_item_id' => $item->id, 'quantity' => 10],
+            ],
+            'notes' => 'Pengeluaran Batch dengan Tanda Tangan',
+            'pic_name' => 'Petugas Test',
+            'signature_data' => $fakeSignature,
+        ]);
+
+        $response->assertOk();
+        $this->assertEquals(40, $item->fresh()->current_stock);
+
+        $movement = WarehouseStockMovement::where('warehouse_item_id', $item->id)->latest('id')->first();
+        $this->assertNotNull($movement);
+        $this->assertNotNull($movement->signature_path);
+        Storage::disk('public')->assertExists($movement->signature_path);
     }
 
     public function test_sales_role_cannot_access_scanner_system(): void
@@ -699,5 +820,102 @@ class StinModuleTest extends TestCase
         $this->actingAs($user)->get(route('stin.scanner.index'))->assertForbidden();
         $this->actingAs($user)->postJson(route('stin.scanner.lookup'), ['code' => 'SKU-TEST'])->assertForbidden();
         $this->actingAs($user)->postJson(route('stin.scanner.action'), [])->assertForbidden();
+        $this->actingAs($user)->postJson(route('stin.scanner.batch-action'), [])->assertForbidden();
+    }
+
+    public function test_stin_user_can_export_item_mutations_to_excel(): void
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::STIN,
+        ]);
+
+        $branch = WarehouseBranch::firstOrCreate(['code' => 'STIN'], [
+            'name' => 'Gudang STIN',
+            'is_active' => true,
+        ]);
+
+        $item = WarehouseItem::create([
+            'warehouse_branch_id' => $branch->id,
+            'name' => 'Parfum Melati Eksklusif',
+            'category' => 'Floral Series',
+            'sku' => 'SKU-EXP-001',
+            'current_stock' => 50,
+            'unit' => 'botol',
+            'unit_price' => 120000,
+            'is_active' => true,
+        ]);
+
+        $item->addStock(20, 'Stok Awal Melati', 'PIC Tester');
+        $item->removeStock(5, 'Pengambilan Tester Toko', 'PIC Toko');
+
+        $response = $this->actingAs($user)->get(route('stin.items.mutations.export', $item));
+
+        $response->assertOk();
+        $this->assertStringContainsString('text/csv', $response->headers->get('content-type'));
+        $this->assertStringContainsString('mutasi_stok_sku-exp-001_', $response->headers->get('content-disposition'));
+
+        $content = $response->streamedContent();
+        $this->assertStringContainsString('Parfum Melati Eksklusif', $content);
+        $this->assertStringContainsString('SKU-EXP-001', $content);
+        $this->assertStringContainsString('Stok Masuk', $content);
+        $this->assertStringContainsString('Stok Keluar', $content);
+    }
+
+    public function test_stin_user_can_export_all_warehouse_mutations_to_excel(): void
+    {
+        $user = User::factory()->create([
+            'role' => UserRole::STIN,
+        ]);
+
+        $branch = WarehouseBranch::firstOrCreate(['code' => 'STIN'], [
+            'name' => 'Gudang STIN',
+            'is_active' => true,
+        ]);
+
+        $item = WarehouseItem::create([
+            'warehouse_branch_id' => $branch->id,
+            'name' => 'Parfum Cendana Premium',
+            'category' => 'Woody Series',
+            'sku' => 'SKU-EXP-002',
+            'current_stock' => 10,
+            'unit' => 'botol',
+            'unit_price' => 180000,
+            'is_active' => true,
+        ]);
+
+        $item->addStock(10, 'Restock Batch A', 'Staff Restock');
+
+        $response = $this->actingAs($user)->get(route('stin.mutations.export'));
+
+        $response->assertOk();
+        $this->assertStringContainsString('text/csv', $response->headers->get('content-type'));
+        $this->assertStringContainsString('mutasi_stok_gudang_', $response->headers->get('content-disposition'));
+
+        $content = $response->streamedContent();
+        $this->assertStringContainsString('Parfum Cendana Premium', $content);
+        $this->assertStringContainsString('SKU-EXP-002', $content);
+    }
+
+    public function test_sales_role_cannot_export_warehouse_mutations(): void
+    {
+        $salesUser = User::factory()->create([
+            'role' => UserRole::SALES,
+        ]);
+
+        $branch = WarehouseBranch::firstOrCreate(['code' => 'STIN'], [
+            'name' => 'Gudang STIN',
+            'is_active' => true,
+        ]);
+
+        $item = WarehouseItem::create([
+            'warehouse_branch_id' => $branch->id,
+            'name' => 'Item Rahasia',
+            'current_stock' => 1,
+            'sku' => 'SKU-SECRET',
+            'is_active' => true,
+        ]);
+
+        $this->actingAs($salesUser)->get(route('stin.items.mutations.export', $item))->assertForbidden();
+        $this->actingAs($salesUser)->get(route('stin.mutations.export'))->assertForbidden();
     }
 }

@@ -456,6 +456,24 @@
                         <span class="nav-text-label">Data Gudang</span>
                     </a>
 
+                    <a href="{{ route('stin.loans.index') }}" title="Barang Dipinjam" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('stin.loans.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                        <div class="nav-icon-box">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                            </svg>
+                        </div>
+                        <span class="nav-text-label">Barang Dipinjam</span>
+                    </a>
+
+                    <a href="{{ route('stin.mutations.index') }}" title="Riwayat Mutasi" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('stin.mutations.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                        <div class="nav-icon-box">
+                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                            </svg>
+                        </div>
+                        <span class="nav-text-label">Riwayat Mutasi</span>
+                    </a>
+
                     <a href="{{ route('stin.scanner.index') }}" title="Scan Barcode" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('stin.scanner.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
                         <div class="nav-icon-box">
                             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -576,7 +594,6 @@
                                 'url' => route('stin.dashboard'),
                                 'active' => request()->routeIs('stin.*'),
                                 'hasAccess' => $u ? $u->canAccessModule('stin') : false,
-                                'underDevelopment' => true,
                                 'icon' => 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z',
                             ],
                             [

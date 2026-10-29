@@ -36,10 +36,13 @@
             </form>
         </div>
 
-        <!-- Actions: Scan Barcode & Input Barang -->
+        <!-- Actions: Scan Barcode, Barang Dipinjam & Input Barang -->
         <div class="flex items-center gap-2 flex-shrink-0">
             <a href="{{ route('stin.scanner.index') }}" class="px-4 py-2.5 rounded-2xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold shadow-sm transition whitespace-nowrap block text-center">
                 Scan Barcode
+            </a>
+            <a href="{{ route('stin.loans.index') }}" class="px-4 py-2.5 rounded-2xl border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold shadow-sm transition whitespace-nowrap block text-center">
+                Barang Dipinjam
             </a>
             <a href="{{ route('stin.items.create') }}" class="px-5 py-2.5 rounded-2xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition shadow-sm whitespace-nowrap block text-center">
                 Input Barang

@@ -8,9 +8,12 @@ use App\Models\Invoice;
 use App\Models\MaterialLog;
 use App\Models\Product;
 use App\Models\SalesOrder;
+use App\Models\WarehouseItem;
+use App\Models\WarehouseStockMovement;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExcelImportExportService
@@ -555,6 +558,133 @@ class ExcelImportExportService
                         $log->notes ?? '-',
                     ]);
                 });
+
+            fclose($handle);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    // ==========================================
+    // 5. WAREHOUSE STOCK MUTATIONS EXPORT
+    // ==========================================
+
+    public function exportWarehouseMutations(
+        ?WarehouseItem $item = null,
+        ?string $type = null,
+        ?string $startDate = null,
+        ?string $endDate = null,
+        ?string $month = null,
+        ?string $search = null,
+        ?string $category = null
+    ): StreamedResponse {
+        $monthSuffix = $month && $month !== 'all' ? '_'.$month : '';
+        $prefix = $item ? 'mutasi_stok_'.Str::slug($item->sku ?: 'item-'.$item->id) : 'mutasi_stok_gudang'.$monthSuffix;
+        $filename = $prefix.'_'.date('Ymd_His').'.csv';
+
+        return response()->streamDownload(function () use ($item, $type, $startDate, $endDate, $month, $search, $category) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            fputcsv($handle, [
+                'No.',
+                'Tanggal & Waktu',
+                'SKU',
+                'Nama Barang',
+                'Kategori',
+                'Jenis Mutasi',
+                'Perubahan Qty',
+                'Satuan',
+                'Stok Sebelum',
+                'Stok Sesudah',
+                'Petugas (PIC)',
+                'Catatan / Referensi',
+                'Tanda Tangan',
+            ]);
+
+            $query = WarehouseStockMovement::with('item')
+                ->latest('movement_date')
+                ->latest('id');
+
+            if ($item) {
+                $query->where('warehouse_item_id', $item->id);
+            }
+
+            if ($type && $type !== 'all') {
+                $query->where('type', $type);
+            }
+
+            if ($startDate) {
+                $query->whereDate('movement_date', '>=', $startDate);
+            }
+
+            if ($endDate) {
+                $query->whereDate('movement_date', '<=', $endDate);
+            }
+
+            if ($month && $month !== 'all') {
+                try {
+                    $mStart = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+                    $mEnd = Carbon::createFromFormat('Y-m', $month)->endOfMonth();
+                    $query->whereBetween(DB::raw('COALESCE(movement_date, created_at)'), [$mStart, $mEnd]);
+                } catch (\Throwable $e) {
+                    // Ignore format error and proceed
+                }
+            }
+
+            if ($category && $category !== 'all') {
+                $query->whereHas('item', fn ($q) => $q->where('category', $category));
+            }
+
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('notes', 'like', "%{$search}%")
+                        ->orWhere('pic_name', 'like', "%{$search}%")
+                        ->orWhereHas('item', function ($sub) use ($search) {
+                            $sub->where('name', 'like', "%{$search}%")
+                                ->orWhere('sku', 'like', "%{$search}%");
+                        });
+                });
+            }
+
+            $counter = 1;
+            $query->chunk(200, function ($movements) use ($handle, &$counter) {
+                foreach ($movements as $m) {
+                    $itemModel = $m->item;
+                    $typeStr = match ($m->type) {
+                        'in' => 'Stok Masuk',
+                        'out' => 'Stok Keluar',
+                        'adjustment' => 'Penyesuaian',
+                        'transfer' => 'Transfer',
+                        default => ucfirst($m->type),
+                    };
+
+                    $qtyFormatted = match ($m->type) {
+                        'in' => "+{$m->quantity}",
+                        'out' => "-{$m->quantity}",
+                        default => "{$m->quantity}",
+                    };
+
+                    $dateFormatted = ($m->movement_date ?? $m->created_at)?->timezone('Asia/Jakarta')->format('d/m/Y H:i').' WIB';
+
+                    fputcsv($handle, [
+                        $counter++,
+                        $dateFormatted,
+                        $itemModel ? $itemModel->sku : '-',
+                        $itemModel ? $itemModel->name : '-',
+                        $itemModel ? ($itemModel->category ?? '-') : '-',
+                        $typeStr,
+                        $qtyFormatted,
+                        $itemModel ? ($itemModel->unit ?? 'pcs') : 'pcs',
+                        $m->stock_before,
+                        $m->stock_after,
+                        $m->pic_name ?? '-',
+                        $m->notes ?? '-',
+                        $m->signature_path ? 'Ada' : 'Tidak Ada',
+                    ]);
+                }
+            });
 
             fclose($handle);
         }, $filename, [

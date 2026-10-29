@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\WarehouseBranch;
 use App\Models\WarehouseItem;
 use App\Services\BarcodeService;
+use App\Services\ExcelImportExportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StinItemController extends Controller
 {
@@ -226,5 +228,31 @@ class StinItemController extends Controller
             'layout',
             'size'
         ));
+    }
+
+    /**
+     * Export riwayat mutasi stok untuk barang tertentu ke Excel (CSV UTF-8 BOM).
+     */
+    public function exportItemMutations(Request $request, WarehouseItem $item, ExcelImportExportService $excelService): StreamedResponse
+    {
+        return $excelService->exportWarehouseMutations(
+            item: $item,
+            type: $request->input('type'),
+            startDate: $request->input('start_date'),
+            endDate: $request->input('end_date')
+        );
+    }
+
+    /**
+     * Export seluruh riwayat mutasi stok gudang STIN ke Excel (CSV UTF-8 BOM).
+     */
+    public function exportAllMutations(Request $request, ExcelImportExportService $excelService): StreamedResponse
+    {
+        return $excelService->exportWarehouseMutations(
+            item: null,
+            type: $request->input('type'),
+            startDate: $request->input('start_date'),
+            endDate: $request->input('end_date')
+        );
     }
 }
