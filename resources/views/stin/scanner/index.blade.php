@@ -90,9 +90,11 @@
                             autocomplete="off" 
                             autofocus 
                             placeholder="Silahkan barcode produk" 
-                            class="apple-input w-full rounded-2xl px-4 py-3 text-sm font-mono font-medium border-2 border-slate-900 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900 shadow-xs"
+                            class="apple-input w-full rounded-2xl pl-4 pr-28 py-3 text-sm font-mono font-medium border-2 border-slate-900 bg-white text-slate-900 placeholder:text-slate-400 focus:border-slate-900 shadow-xs"
                         >
-                        <div id="scannerLivePulse" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-700 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-full font-bold select-none">
+                        <div id="scannerLivePulse" 
+                             style="position: absolute; right: 14px; top: 50%; transform: translateY(-50%); -webkit-transform: translateY(-50%); pointer-events: none; z-index: 10;" 
+                             class="text-[10px] font-mono text-slate-700 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-full font-bold select-none">
                             STANDBY
                         </div>
                     </div>
@@ -737,14 +739,24 @@
         }
     }
 
+    function updateScannerPulse(status) {
+        const livePulse = document.getElementById('scannerLivePulse');
+        if (!livePulse) return;
+        if (status === 'BUSY') {
+            livePulse.innerText = 'BUSY...';
+            livePulse.classList.remove('bg-slate-100', 'text-slate-700', 'border-slate-300');
+            livePulse.classList.add('bg-amber-100', 'text-amber-800', 'border-amber-300');
+        } else {
+            livePulse.innerText = 'STANDBY';
+            livePulse.classList.remove('bg-amber-100', 'text-amber-800', 'border-amber-300');
+            livePulse.classList.add('bg-slate-100', 'text-slate-700', 'border-slate-300');
+        }
+    }
+
     async function processScannedCode(rawCode) {
         const submitBtn = document.getElementById('submitScanBtn');
-        const livePulse = document.getElementById('scannerLivePulse');
         if (submitBtn) submitBtn.disabled = true;
-        if (livePulse) {
-            livePulse.innerText = 'BUSY...';
-            livePulse.className = 'absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-700 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-full font-bold select-none';
-        }
+        updateScannerPulse('BUSY');
 
         // Check for Multiplier Syntax: e.g. "50*SKU123" or "50xSKU123" or "50 * SKU123"
         let scannedQty = 1;
@@ -773,10 +785,7 @@
             if (!lookupRes.ok || !lookupData.success) {
                 showFeedback(lookupData.message || `Barang '${cleanCode}' tidak ditemukan di gudang.`, true);
                 if (submitBtn) submitBtn.disabled = false;
-                if (livePulse) {
-                    livePulse.innerText = 'STANDBY';
-                    livePulse.className = 'absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-700 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-full font-bold select-none';
-                }
+                updateScannerPulse('STANDBY');
                 focusBarcodeInput();
                 return;
             }
@@ -800,10 +809,7 @@
             showFeedback('Terjadi kendala jaringan saat memproses scan.', true);
         } finally {
             if (submitBtn) submitBtn.disabled = false;
-            if (livePulse) {
-                livePulse.innerText = 'STANDBY';
-                livePulse.className = 'absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-slate-700 bg-slate-100 border border-slate-300 px-2.5 py-1 rounded-full font-bold select-none';
-            }
+            updateScannerPulse('STANDBY');
             focusBarcodeInput();
         }
     }
