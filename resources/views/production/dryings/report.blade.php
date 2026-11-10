@@ -50,11 +50,12 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">
-                            Tanggal Selesai Jemur <span class="text-red-500">*</span>
+                            Tanggal Selesai Jemur <span class="text-slate-900">*</span>
                         </label>
                         <input 
                             type="date" 
                             name="end_date" 
+                            id="end_date"
                             value="{{ old('end_date', date('Y-m-d')) }}" 
                             class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold" 
                             required
@@ -63,7 +64,64 @@
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">
-                            Berat Setelah Dijemur ({{ $log->material->unit }}) <span class="text-red-500">*</span>
+                            Penanggung Jawab (PIC) <span class="text-slate-900">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            name="pic_name" 
+                            value="{{ old('pic_name', $log->pic_name) }}" 
+                            placeholder="Nama penanggung jawab pelapor..."
+                            class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold" 
+                            required
+                        >
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Waktu Jemur <span class="text-slate-900">*</span>
+                        </label>
+                        <input 
+                            type="time" 
+                            name="start_time" 
+                            id="start_time"
+                            value="{{ old('start_time', $log->start_time ?? '08:00') }}" 
+                            class="w-full px-3 py-2 rounded-xl apple-input text-xs font-mono font-bold" 
+                            required
+                            oninput="calculateDryingConversion()"
+                        >
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">Jam barang mulai dijemur</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Waktu Angkat <span class="text-slate-900">*</span>
+                        </label>
+                        <input 
+                            type="time" 
+                            name="end_time" 
+                            id="end_time"
+                            value="{{ old('end_time', date('H:i')) }}" 
+                            class="w-full px-3 py-2 rounded-xl apple-input text-xs font-mono font-bold" 
+                            required
+                            oninput="calculateDryingConversion()"
+                        >
+                        <span class="text-[10px] text-slate-400 mt-0.5 block">Jam barang diangkat dari jemuran</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Hasil Konversi Lama Jemur
+                        </label>
+                        <div class="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between min-h-[38px]">
+                            <span id="durationDisplay" class="font-mono font-bold text-slate-900 text-xs">0 Jam</span>
+                            <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Konversi Sistem</span>
+                        </div>
+                        <input type="hidden" name="drying_hours" id="drying_hours" value="{{ old('drying_hours') }}">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1">
+                            Berat Setelah Dijemur ({{ $log->material->unit }}) <span class="text-slate-900">*</span>
                         </label>
                         <input 
                             type="number" 
@@ -72,22 +130,6 @@
                             value="{{ old('new_weight') }}" 
                             placeholder="Contoh: 100.50"
                             class="w-full px-3 py-2 rounded-xl apple-input text-xs font-mono font-bold" 
-                            required
-                        >
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 gap-4 pt-2">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1">
-                            Penanggung Jawab (PIC) <span class="text-red-500">*</span>
-                        </label>
-                        <input 
-                            type="text" 
-                            name="pic_name" 
-                            value="{{ old('pic_name') }}" 
-                            placeholder="Nama penanggung jawab pelapor..."
-                            class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold" 
                             required
                         >
                     </div>
@@ -140,7 +182,51 @@
 </div>
 
 <script>
+    function calculateDryingConversion() {
+        const startTimeInput = document.getElementById('start_time');
+        const endTimeInput = document.getElementById('end_time');
+        const durationDisplay = document.getElementById('durationDisplay');
+        const dryingHoursInput = document.getElementById('drying_hours');
+
+        if (!startTimeInput || !endTimeInput) return;
+
+        const startVal = startTimeInput.value;
+        const endVal = endTimeInput.value;
+
+        if (!startVal || !endVal) {
+            if (durationDisplay) durationDisplay.textContent = '-';
+            if (dryingHoursInput) dryingHoursInput.value = '';
+            return;
+        }
+
+        const [startH, startM] = startVal.split(':').map(Number);
+        const [endH, endM] = endVal.split(':').map(Number);
+
+        let startTotalMin = startH * 60 + startM;
+        let endTotalMin = endH * 60 + endM;
+
+        let diffMin = endTotalMin - startTotalMin;
+        if (diffMin < 0) {
+            diffMin += 24 * 60;
+        }
+
+        const hours = (diffMin / 60).toFixed(2);
+        const cleanHours = parseFloat(hours);
+
+        const displayH = Math.floor(diffMin / 60);
+        const displayM = diffMin % 60;
+
+        let text = `${cleanHours} Jam`;
+        if (displayM > 0) {
+            text += ` (${displayH} Jam ${displayM} Menit)`;
+        }
+
+        if (durationDisplay) durationDisplay.textContent = text;
+        if (dryingHoursInput) dryingHoursInput.value = cleanHours;
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        calculateDryingConversion();
         const canvas = document.getElementById('reportSignatureCanvas');
         if (!canvas) return;
 

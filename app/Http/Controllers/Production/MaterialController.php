@@ -19,6 +19,7 @@ use App\Services\Production\MaterialService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -43,13 +44,9 @@ class MaterialController extends Controller
             $query->where('category', $category);
         }
 
-        $materials = $query->with('branches')->orderBy('name')->paginate(15)->withQueryString();
+        $materials = $query->with(['latestReceipt', 'recountLogs', 'dryingLogs'])->orderBy('name')->paginate(15)->withQueryString();
 
         $categories = Material::getAllCategories();
-
-        $totalMaterials = Material::count();
-        $totalStockValue = Material::all()->sum(fn ($m) => (float) $m->stock_quantity * (float) $m->unit_cost);
-        $lowStockCount = Material::whereColumn('stock_quantity', '<=', 'minimum_stock')->count();
 
         $recentLogs = MaterialLog::with('material')
             ->latest('id')
@@ -61,9 +58,6 @@ class MaterialController extends Controller
         return view('production.materials.index', compact(
             'materials',
             'categories',
-            'totalMaterials',
-            'totalStockValue',
-            'lowStockCount',
             'recentLogs',
             'allMaterials'
         ));
@@ -75,7 +69,7 @@ class MaterialController extends Controller
     public function createReceipt(): View
     {
         $materials = Material::orderBy('name')->get();
-        $categories = Material::getAllCategories();
+        $categories = Material::getReceiptCategories();
 
         $latestReceipt = MaterialReceipt::latest('id')->first();
         $nextNumber = 'IN-'.date('Y').'-'.str_pad(($latestReceipt ? $latestReceipt->id + 1 : 1), 4, '0', STR_PAD_LEFT);
@@ -127,6 +121,29 @@ class MaterialController extends Controller
     }
 
     /**
+     * Hapus data bahan baku dari gudang.
+     */
+    public function destroyMaterial(Material $material): RedirectResponse
+    {
+        return DB::transaction(function () use ($material) {
+            $name = $material->name;
+            $code = $material->code;
+
+            try {
+                $material->delete();
+
+                return redirect()
+                    ->route('production.materials.index')
+                    ->with('success', "Bahan baku [{$code}] {$name} berhasil dihapus dari daftar barang gudang.");
+            } catch (\Exception $e) {
+                return redirect()
+                    ->route('production.materials.index')
+                    ->with('error', "Bahan baku [{$code}] {$name} tidak dapat dihapus karena masih terkait dengan data proses produksi aktif.");
+            }
+        });
+    }
+
+    /**
      * Hitung ulang stok fisik (Opname / Timbang Ulang).
      */
     public function recountMaterial(RecountMaterialRequest $request, Material $material, MaterialService $materialService): RedirectResponse
@@ -172,16 +189,24 @@ class MaterialController extends Controller
     /**
      * Halaman inisiasi jemur bahan baku.
      */
-    public function createDryingLog(Request $request)
+    public function createDryingLog(Request $request): View|RedirectResponse
     {
         $materialId = $request->input('material_id');
-        $material = Material::find($materialId);
+        $material = null;
 
-        if (! $material) {
-            return redirect()->route('production.dryings.index')->withErrors('Bahan baku tidak ditemukan atau belum dipilih.');
+        if ($materialId) {
+            $material = Material::find($materialId);
+            if (! $material || $material->category !== 'KCB') {
+                return redirect()->route('production.dryings.index')
+                    ->withErrors('Hanya bahan baku berkategori KCB yang dapat dijemur.');
+            }
         }
 
-        return view('production.dryings.create', compact('material'));
+        $materials = Material::availableForDrying()
+            ->orderBy('name')
+            ->get();
+
+        return view('production.dryings.create', compact('material', 'materials'));
     }
 
     /**
@@ -230,30 +255,29 @@ class MaterialController extends Controller
      */
     public function dryingIndex(Request $request): View
     {
-        $materials = Material::where('stock_quantity', '>', 0)
-            ->whereIn('category', ['Bahan Sortir', 'Hasil Sortir'])
-            ->orderBy('name')
-            ->get();
+        $activeQuery = MaterialDryingLog::with('material')
+            ->where('status', 'menunggu')
+            ->latest('id');
 
-        $query = MaterialDryingLog::with('material')->latest('id');
+        $query = MaterialDryingLog::with('material')
+            ->where('status', 'selesai')
+            ->latest('id');
 
         if ($search = $request->input('search')) {
+            $activeQuery->whereHas('material', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%");
+            });
+
             $query->whereHas('material', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
+        $activeLogs = $activeQuery->get();
         $logs = $query->paginate(20)->withQueryString();
 
-        $totalDryingLogs = MaterialDryingLog::count();
-        $totalShrinkage = MaterialDryingLog::sum('shrinkage_weight');
-
-        return view('production.dryings.index', compact(
-            'materials',
-            'logs',
-            'totalDryingLogs',
-            'totalShrinkage'
-        ));
+        return view('production.dryings.index', compact('activeLogs', 'logs'));
     }
 }

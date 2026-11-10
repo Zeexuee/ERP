@@ -52,8 +52,8 @@ class MaterialSortController extends Controller
      */
     public function create(): View
     {
-        // Ambil semua bahan baku untuk pilihan bahan mentah dan bahan target hasil sortir
-        $materials = Material::orderBy('name')->get();
+        // Hanya tampilkan bahan baku gudang berkategori KCB dengan stok > 0 yang bebas proses aktif
+        $materials = Material::availableForSort()->orderBy('name')->get();
 
         return view('production.sorts.create', compact('materials'));
     }
@@ -63,10 +63,27 @@ class MaterialSortController extends Controller
      */
     public function store(Request $request, MaterialSortService $service): RedirectResponse
     {
+        $sourceMaterialRule = [
+            'required',
+            'exists:materials,id',
+            function ($attribute, $value, $fail) {
+                $material = Material::find($value);
+                if (! $material) {
+                    return;
+                }
+                if ($material->category !== 'KCB') {
+                    $fail('Hanya bahan baku berkategori KCB yang dapat diinisiasi untuk proses sortir.');
+                } elseif ($material->isInActiveProcess()) {
+                    $processName = $material->getActiveProcessName() ?? 'lain';
+                    $fail("Bahan baku ini sedang dalam proses {$processName} dan belum selesai.");
+                }
+            },
+        ];
+
         // Mendukung mode lengkap jika items disertakan (backward-compatibility)
         if ($request->has('items') && is_array($request->input('items'))) {
             $validated = $request->validate([
-                'source_material_id' => ['required', 'exists:materials,id'],
+                'source_material_id' => $sourceMaterialRule,
                 'initial_weight' => ['required', 'numeric', 'min:0.01'],
                 'dried_weight' => ['required', 'numeric', 'min:0.01'],
                 'sort_date' => ['required', 'date'],
@@ -103,7 +120,7 @@ class MaterialSortController extends Controller
 
         // Mode Inisiasi Murni (Tanpa pembagian hasil sortir)
         $validated = $request->validate([
-            'source_material_id' => ['required', 'exists:materials,id'],
+            'source_material_id' => $sourceMaterialRule,
             'initial_weight' => ['required', 'numeric', 'min:0.01'],
             'sort_date' => ['required', 'date'],
             'pic_name' => ['required', 'string', 'max:100'],
@@ -142,12 +159,21 @@ class MaterialSortController extends Controller
         $sortBatch->load(['sourceMaterial', 'items.targetMaterial']);
         $sourceUnit = $sortBatch->sourceMaterial?->unit;
 
-        $materialsQuery = Material::orderBy('category')->orderBy('name');
+        $targetCategories = ['Bahan Tembak', 'Bahan Potong Ukir'];
+
+        $materialsQuery = Material::where(function ($q) {
+            $q->whereIn('category', ['Bahan Tembak', 'Bahan Potong Ukir', 'Bahan Ukir Potong'])
+                ->orWhereRaw('LOWER(TRIM(category)) IN (?, ?, ?)', ['bahan tembak', 'bahan potong ukir', 'bahan ukir potong']);
+        })
+            ->whereKeyNot($sortBatch->source_material_id)
+            ->orderBy('category')
+            ->orderBy('name');
+
         if ($sourceUnit) {
             $materialsQuery->whereRaw('LOWER(unit) = ?', [strtolower(trim($sourceUnit))]);
         }
         $materials = $materialsQuery->get();
-        $categories = Material::getAllCategories();
+        $categories = $targetCategories;
 
         return view('production.sorts.show', compact('sortBatch', 'materials', 'categories'));
     }
@@ -157,18 +183,54 @@ class MaterialSortController extends Controller
      */
     public function storeReport(Request $request, MaterialSortBatch $sortBatch, MaterialSortService $service): RedirectResponse
     {
+        if ($request->input('action') === 'draft') {
+            try {
+                $service->saveDraftSortReport($sortBatch, $request->all());
+
+                return redirect()
+                    ->route('production.sorts.show', $sortBatch)
+                    ->with('success', "Progres laporan sortir #{$sortBatch->sort_code} berhasil disimpan sementara. Anda dapat melanjutkannya kapan saja.");
+            } catch (\InvalidArgumentException $e) {
+                return back()
+                    ->withInput()
+                    ->withErrors(['report' => $e->getMessage()]);
+            } catch (\Throwable $e) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Gagal menyimpan draf sortir: '.$e->getMessage());
+            }
+        }
+
         $validated = $request->validate([
             'report_date' => ['required', 'date'],
             'report_pic_name' => ['required', 'string', 'max:100'],
+            'returned_weight' => ['nullable', 'numeric', 'min:0'],
             'report_signature_data' => ['nullable', 'string'],
+            'notes' => ['nullable', 'string', 'max:1000'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.target_material_id' => ['required', 'exists:materials,id'],
+            'items.*.target_material_id' => [
+                'required',
+                'exists:materials,id',
+                function ($attribute, $value, $fail) use ($sortBatch) {
+                    if ((int) $value === (int) $sortBatch->source_material_id) {
+                        $fail('Bahan hasil sortir tidak boleh sama dengan bahan baku mentah asal yang sedang disortir.');
+                    }
+                    $target = Material::find($value);
+                    if ($target) {
+                        $catLower = strtolower(trim((string) $target->category));
+                        if (! in_array($catLower, ['bahan tembak', 'bahan potong ukir', 'bahan ukir potong'], true)) {
+                            $fail("Bahan hasil sortir [{$target->name}] harus berkategori Bahan Tembak atau Bahan Potong Ukir (kategori saat ini: {$target->category}).");
+                        }
+                    }
+                },
+            ],
             'items.*.result_weight' => ['required', 'numeric', 'min:0.01'],
             'items.*.notes' => ['nullable', 'string', 'max:255'],
         ], [
             'report_date.required' => 'Pilih tanggal pelaporan hasil sortir.',
             'report_pic_name.required' => 'Masukkan nama petugas pelapor hasil sortir.',
-            'items.required' => 'Masukkan minimal satu jenis bahan kayu tembak hasil sortir.',
+            'returned_weight.min' => 'Berat bahan yang dikembalikan tidak boleh bernilai negatif.',
+            'items.required' => 'Masukkan minimal satu jenis bahan hasil sortir.',
             'items.*.target_material_id.required' => 'Pilih jenis bahan hasil sortir.',
             'items.*.result_weight.required' => 'Masukkan kuantitas hasil sortir (kg).',
         ]);

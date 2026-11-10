@@ -24,10 +24,30 @@ class ReportMaterialDryingLogRequest extends FormRequest
     {
         return [
             'end_date' => ['required', 'date'],
+            'start_time' => ['required', 'string'],
+            'end_time' => ['required', 'string'],
+            'drying_hours' => ['nullable', 'numeric'],
             'new_weight' => ['required', 'numeric', 'min:0'],
             'pic_name' => ['required', 'string', 'max:100'],
             'notes' => ['nullable', 'string'],
             'signature_data' => ['nullable', 'string'],
+        ];
+    }
+
+    /**
+     * Get custom attributes for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'start_time' => 'waktu jemur',
+            'end_time' => 'waktu angkat',
+            'drying_hours' => 'lama jemur',
+            'new_weight' => 'berat setelah dijemur',
+            'end_date' => 'tanggal selesai jemur',
+            'pic_name' => 'penanggung jawab',
         ];
     }
 }

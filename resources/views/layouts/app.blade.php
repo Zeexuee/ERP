@@ -74,17 +74,30 @@
 
         /* Inputs */
         .apple-input {
-            background: rgba(255, 255, 255, 0.75);
-            border: 1px solid rgba(15, 23, 42, 0.15);
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
             color: #0f172a;
+            font-weight: 500;
             transition: all 0.2s ease;
+        }
+
+        .apple-input::placeholder {
+            color: #64748b;
+            opacity: 1;
         }
 
         .apple-input:focus {
             outline: none;
-            background: rgba(255, 255, 255, 0.95);
+            background: #ffffff;
             border-color: #0f172a;
             box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.12);
+        }
+
+        .apple-input:disabled {
+            background: #f1f5f9;
+            color: #64748b;
+            border-color: #e2e8f0;
+            cursor: not-allowed;
         }
 
         /* Dark Neutral Buttons (No bright colors) */
@@ -206,6 +219,33 @@
             padding-left: 0 !important;
             padding-right: 0 !important;
         }
+
+        .nav-section-header {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 200ms ease, color 200ms ease;
+        }
+
+        .nav-section-header .nav-section-title {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+
+        .is-collapsed .nav-section-header {
+            display: none !important;
+        }
+
+        .is-collapsed .nav-collapsible-content.hidden {
+            display: block !important;
+        }
+
+        .scrollbar-none::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-none {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
     </style>
 </head>
 <body class="h-full flex overflow-hidden relative text-slate-900">
@@ -216,9 +256,9 @@
 
     <!-- Floating Sidebar (Elongated Glass Rail with Fixed Icon Anchors) -->
     <aside id="floatingSidebar" class="w-64 my-4 ml-4 apple-glass-panel rounded-3xl border border-white flex flex-col justify-between hidden md:flex relative z-50 shadow-xl overflow-visible">
-        <div>
+        <div class="flex-1 flex flex-col min-h-0 overflow-hidden">
             <!-- Brand Header & Toggle Icon -->
-            <div class="brand-header-container h-16 flex items-center justify-between px-3 border-b border-slate-900/10 w-full">
+            <div class="brand-header-container h-16 flex items-center justify-between px-3 border-b border-slate-900/10 w-full shrink-0">
                 <div class="brand-text-label">
                     <span class="font-bold text-xs tracking-wider text-slate-500 uppercase">Beta v.1.1.2</span>
                 </div>
@@ -230,7 +270,7 @@
             </div>
 
             <!-- Navigation Rail Items with Fixed Icons & Delayed Text -->
-            <nav class="px-2 py-4 space-y-1">
+            <nav class="px-2 py-3 space-y-1 overflow-y-auto flex-1 scrollbar-none">
                 @php
                     $currentUser = auth()->user();
                     $userRole = $currentUser?->role?->value;
@@ -318,7 +358,22 @@
                     </a>
 
                 @elseif($currentDivision === 'production')
-                    <!-- Produksi Navigation -->
+                    @php
+                        $isWarehouseActive = request()->routeIs('production.materials.*') ||
+                                             request()->routeIs('production.dryings.*') ||
+                                             request()->routeIs('production.sorts.*') ||
+                                             request()->routeIs('production.carves.*') ||
+                                             request()->routeIs('production.melts.*');
+
+                        $isManufactureActive = request()->routeIs('production.tembaks.*') ||
+                                               request()->routeIs('production.colorings.*') ||
+                                               request()->routeIs('production.finishings.*');
+
+                        $isCatalogActive = request()->routeIs('products.*') ||
+                                           request()->routeIs('production-requests.*');
+                    @endphp
+
+                    <!-- Produksi Navigation: Utama -->
                     <a href="{{ route('production.dashboard') }}" title="Dashboard Produksi" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.dashboard') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
                         <div class="nav-icon-box">
                             <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -337,102 +392,152 @@
                         <span class="nav-text-label">Papan Proses</span>
                     </a>
 
-                    <div class="nav-section-title px-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Warehouse</div>
+                    <!-- Group 1: Warehouse -->
+                    <div class="nav-collapsible-section pt-1">
+                        <button 
+                            type="button" 
+                            onclick="toggleNavGroup('warehouse')" 
+                            class="nav-section-header w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl hover:bg-white/60 text-slate-500 hover:text-slate-900 transition-colors group cursor-pointer"
+                            title="Buka / Tutup Menu Warehouse"
+                        >
+                            <span class="nav-section-title px-0 text-[10px] font-extrabold uppercase tracking-widest text-slate-400 group-hover:text-slate-800 transition-colors">Warehouse</span>
+                            <div class="nav-section-icon flex items-center justify-center w-5 h-5 rounded-md text-slate-400 group-hover:text-slate-900 transition">
+                                <svg id="nav-arrow-warehouse" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
 
-                    <a href="{{ route('production.materials.index') }}" title="Barang Gudang" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.materials.index') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                            </svg>
+                        <div id="nav-group-warehouse" data-active="{{ $isWarehouseActive ? 'true' : 'false' }}" class="nav-collapsible-content space-y-1 mt-0.5">
+                            <a href="{{ route('production.materials.index') }}" title="Barang Gudang" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.materials.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Barang Gudang</span>
+                            </a>
+
+                            <a href="{{ route('production.dryings.index') }}" title="Jemur Bahan Baku" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.dryings.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Jemur Bahan Baku</span>
+                            </a>
+
+                            <a href="{{ route('production.sorts.index') }}" title="Proses Sortir Kayu" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.sorts.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Sortir Kayu</span>
+                            </a>
+
+                            <a href="{{ route('production.carves.index') }}" title="Proses Potong Ukir" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.carves.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M3 21l8.5-8.5M3 3l8.5 8.5"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Potong Ukir</span>
+                            </a>
+
+                            <a href="{{ route('production.melts.index') }}" title="Proses Pencairan" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.melts.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Pencairan</span>
+                            </a>
                         </div>
-                        <span class="nav-text-label">Barang Gudang</span>
-                    </a>
+                    </div>
 
-                    <a href="{{ route('production.dryings.index') }}" title="Jemur Bahan Baku" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.dryings.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
+                    <!-- Group 2: Manufaktur -->
+                    <div class="nav-collapsible-section pt-1">
+                        <button 
+                            type="button" 
+                            onclick="toggleNavGroup('manufacture')" 
+                            class="nav-section-header w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl hover:bg-white/60 text-slate-500 hover:text-slate-900 transition-colors group cursor-pointer"
+                            title="Buka / Tutup Menu Manufaktur"
+                        >
+                            <span class="nav-section-title px-0 text-[10px] font-extrabold uppercase tracking-widest text-slate-400 group-hover:text-slate-800 transition-colors">Manufaktur</span>
+                            <div class="nav-section-icon flex items-center justify-center w-5 h-5 rounded-md text-slate-400 group-hover:text-slate-900 transition">
+                                <svg id="nav-arrow-manufacture" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+
+                        <div id="nav-group-manufacture" data-active="{{ $isManufactureActive ? 'true' : 'false' }}" class="nav-collapsible-content space-y-1 mt-0.5">
+                            <a href="{{ route('production.tembaks.index') }}" title="Proses Tembak" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.tembaks.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Tembak</span>
+                            </a>
+
+                            <a href="{{ route('production.colorings.index') }}" title="Proses Celup & Warna" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.colorings.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Setelah Jemur Tembak</span>
+                            </a>
+
+                            <a href="{{ route('production.finishings.index') }}" title="Proses Finishing" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.finishings.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Finishing</span>
+                            </a>
                         </div>
-                        <span class="nav-text-label">Jemur Bahan Baku</span>
-                    </a>
+                    </div>
 
-                    <a href="{{ route('production.sorts.index') }}" title="Proses Sortir Kayu" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.sorts.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                            </svg>
+                    <!-- Group 3: Katalog & Antrean -->
+                    <div class="nav-collapsible-section pt-1">
+                        <button 
+                            type="button" 
+                            onclick="toggleNavGroup('catalog')" 
+                            class="nav-section-header w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl hover:bg-white/60 text-slate-500 hover:text-slate-900 transition-colors group cursor-pointer"
+                            title="Buka / Tutup Menu Katalog & Antrean"
+                        >
+                            <span class="nav-section-title px-0 text-[10px] font-extrabold uppercase tracking-widest text-slate-400 group-hover:text-slate-800 transition-colors">Katalog & Antrean</span>
+                            <div class="nav-section-icon flex items-center justify-center w-5 h-5 rounded-md text-slate-400 group-hover:text-slate-900 transition">
+                                <svg id="nav-arrow-catalog" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+
+                        <div id="nav-group-catalog" data-active="{{ $isCatalogActive ? 'true' : 'false' }}" class="nav-collapsible-content space-y-1 mt-0.5">
+                            <a href="{{ route('products.index') }}" title="Produk Jadi" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('products.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Produk Jadi</span>
+                            </a>
+
+                            <a href="{{ route('production-requests.index') }}" title="Antrean Sales" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production-requests.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
+                                <div class="nav-icon-box">
+                                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    </svg>
+                                </div>
+                                <span class="nav-text-label">Antrean Sales</span>
+                            </a>
                         </div>
-                        <span class="nav-text-label">Sortir Kayu</span>
-                    </a>
-
-                    <a href="{{ route('production.carves.index') }}" title="Proses Potong Ukir" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.carves.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M3 21l8.5-8.5M3 3l8.5 8.5"/>
-                            </svg>
-                        </div>
-                        <span class="nav-text-label">Potong Ukir</span>
-                    </a>
-
-                    <a href="{{ route('production.melts.index') }}" title="Proses Pencairan" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.melts.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
-                            </svg>
-                        </div>
-                        <span class="nav-text-label">Pencairan</span>
-                    </a>
-
-                    <div class="nav-section-title px-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Manufaktur</div>
-
-                    <a href="{{ route('production.tembaks.index') }}" title="Proses Tembak" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.tembaks.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                            </svg>
-                        </div>
-                        <span class="nav-text-label">Tembak</span>
-                    </a>
-
-                    <a href="{{ route('production.colorings.index') }}" title="Proses Celup & Warna" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.colorings.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
-                            </svg>
-                        </div>
-                        <span class="nav-text-label">Setelah Jemur Tembak</span>
-                    </a>
-
-                    <a href="{{ route('production.finishings.index') }}" title="Proses Finishing" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production.finishings.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
-                            </svg>
-                        </div>
-                        <span class="nav-text-label">Finishing</span>
-                    </a>
-
-
-                    <div class="nav-section-title px-3 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Katalog & Antrean</div>
-
-                    <a href="{{ route('products.index') }}" title="Produk Jadi" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('products.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                            </svg>
-                        </div>
-                        <span class="nav-text-label">Produk Jadi</span>
-                    </a>
-
-                    <a href="{{ route('production-requests.index') }}" title="Antrean Sales" class="flex items-center gap-2 px-2 py-1 text-sm font-bold rounded-xl transition-all {{ request()->routeIs('production-requests.*') ? 'bg-slate-900 text-white shadow-md' : 'text-slate-700 hover:text-slate-900 hover:bg-white/50' }}">
-                        <div class="nav-icon-box">
-                            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            </svg>
-                        </div>
-                        <span class="nav-text-label">Antrean Sales</span>
-                    </a>
+                    </div>
 
                 @elseif($currentDivision === 'stin')
                     <!-- STIN Navigation -->
@@ -902,6 +1007,49 @@
         window.addEventListener('online', checkNetworkStatus);
         window.addEventListener('offline', checkNetworkStatus);
         document.addEventListener('DOMContentLoaded', checkNetworkStatus);
+
+        // Collapsible Navigation Groups (Warehouse, Manufaktur, Katalog & Antrean)
+        function toggleNavGroup(groupKey) {
+            const content = document.getElementById('nav-group-' + groupKey);
+            const arrow = document.getElementById('nav-arrow-' + groupKey);
+            if (!content) return;
+
+            const isHidden = content.classList.contains('hidden');
+            if (isHidden) {
+                content.classList.remove('hidden');
+                if (arrow) arrow.style.transform = 'rotate(180deg)';
+                localStorage.setItem('nav_group_' + groupKey + '_open', 'true');
+            } else {
+                content.classList.add('hidden');
+                if (arrow) arrow.style.transform = 'rotate(0deg)';
+                localStorage.setItem('nav_group_' + groupKey + '_open', 'false');
+            }
+        }
+
+        function initNavGroups() {
+            ['warehouse', 'manufacture', 'catalog'].forEach(groupKey => {
+                const content = document.getElementById('nav-group-' + groupKey);
+                const arrow = document.getElementById('nav-arrow-' + groupKey);
+                if (!content) return;
+
+                const isActive = content.getAttribute('data-active') === 'true';
+                const savedPref = localStorage.getItem('nav_group_' + groupKey + '_open');
+
+                // Jika halaman aktif berada di dalam grup ini, selalu buka!
+                // Jika tidak aktif, buka jika savedPref !== 'false' (default: terbuka)
+                const shouldBeOpen = isActive || (savedPref !== 'false');
+
+                if (shouldBeOpen) {
+                    content.classList.remove('hidden');
+                    if (arrow) arrow.style.transform = 'rotate(180deg)';
+                } else {
+                    content.classList.add('hidden');
+                    if (arrow) arrow.style.transform = 'rotate(0deg)';
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initNavGroups);
     </script>
 </body>
 </html>

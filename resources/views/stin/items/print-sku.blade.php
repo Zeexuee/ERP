@@ -142,6 +142,7 @@
             color: #000000 !important;
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
         }
 
         main {
@@ -155,25 +156,47 @@
         }
 
         #labelsContainer {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            gap: 2mm !important;
+            display: block !important;
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
         }
 
         .barcode-label {
             box-shadow: none !important;
-            border: 1px dashed #cccccc !important;
+            border: none !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            page-break-after: always !important;
+            break-after: page !important;
             margin: 0 !important;
+            padding: 1.5mm !important;
             background: #ffffff !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+        }
+
+        .barcode-label.label-standard {
+            width: 50mm !important;
+            height: 30mm !important;
+            max-height: 30mm !important;
+        }
+
+        .barcode-label.label-compact {
+            width: 40mm !important;
+            height: 25mm !important;
+            max-height: 25mm !important;
+        }
+
+        .barcode-label.label-large {
+            width: 70mm !important;
+            height: 40mm !important;
+            max-height: 40mm !important;
         }
 
         @page {
             size: auto;
-            margin: 4mm;
+            margin: 0mm !important;
         }
     }
 
@@ -181,7 +204,7 @@
     .barcode-svg-container svg {
         width: 100% !important;
         height: auto !important;
-        max-height: 42px;
+        max-height: 38px;
         display: block;
         margin: 0 auto;
     }
@@ -280,31 +303,31 @@
         }
 
         // Tentukan dimensi label berdasarkan ukuran
-        let sizeClasses = 'w-[52mm] min-h-[32mm] p-2';
-        let nameClasses = 'text-[11px] font-bold line-clamp-1';
-        let subClasses = 'text-[9px] text-slate-600';
-        let skuClasses = 'text-[11px] font-bold font-mono tracking-wider';
-        let qrSize = 'w-12 h-12';
+        let sizeClasses = 'label-standard w-[50mm] h-[30mm] max-h-[30mm] p-1.5';
+        let nameClasses = 'text-[10px] font-bold line-clamp-1 leading-tight';
+        let subClasses = 'text-[8.5px] text-slate-600';
+        let skuClasses = 'text-[10.5px] font-bold font-mono tracking-wider';
+        let qrSize = 'w-11 h-11';
 
         if (currentSize === 'compact') {
-            sizeClasses = 'w-[42mm] min-h-[26mm] p-1.5';
-            nameClasses = 'text-[9px] font-bold line-clamp-1';
-            subClasses = 'text-[8px] text-slate-600';
+            sizeClasses = 'label-compact w-[40mm] h-[25mm] max-h-[25mm] p-1';
+            nameClasses = 'text-[8.5px] font-bold line-clamp-1 leading-tight';
+            subClasses = 'text-[7.5px] text-slate-600';
             skuClasses = 'text-[9px] font-bold font-mono tracking-wide';
-            qrSize = 'w-9 h-9';
+            qrSize = 'w-8 h-8';
         } else if (currentSize === 'large') {
-            sizeClasses = 'w-[72mm] min-h-[44mm] p-3';
-            nameClasses = 'text-[13px] font-bold line-clamp-1';
-            subClasses = 'text-[10px] text-slate-600';
-            skuClasses = 'text-[13px] font-bold font-mono tracking-widest';
-            qrSize = 'w-16 h-16';
+            sizeClasses = 'label-large w-[70mm] h-[40mm] max-h-[40mm] p-2.5';
+            nameClasses = 'text-[12px] font-bold line-clamp-1 leading-tight';
+            subClasses = 'text-[9.5px] text-slate-600';
+            skuClasses = 'text-[12px] font-bold font-mono tracking-widest';
+            qrSize = 'w-14 h-14';
         }
 
         let labelHtml = '';
 
         for (let i = 0; i < currentCopies; i++) {
             labelHtml += `
-                <div class="barcode-label ${sizeClasses} bg-white border border-slate-300 rounded-lg flex flex-col justify-between text-slate-900 select-none overflow-hidden">
+                <div class="barcode-label label-${currentSize} ${sizeClasses} bg-white border border-slate-300 rounded-lg flex flex-col justify-between text-slate-900 select-none overflow-hidden">
                     
                     <!-- Header Info -->
                     <div class="border-b border-slate-200 pb-1 mb-1">

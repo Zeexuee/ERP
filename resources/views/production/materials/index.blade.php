@@ -15,9 +15,6 @@
             <p class="text-xs text-slate-500 mt-0.5">Inventaris bahan baku, sortir kayu, dan penerimaan barang masuk pabrik Gaharu Sana'i.</p>
         </div>
         <div class="flex items-center gap-2">
-            <button type="button" onclick="openNewMaterialModal()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-sm transition">
-                + Tambah Jenis Bahan
-            </button>
             <a href="{{ route('production.materials.create-receipt') }}" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm flex items-center gap-1.5 transition">
                 <span>+ Input Barang Masuk</span>
             </a>
@@ -26,42 +23,19 @@
 
 
 
-    <!-- Summary Metrics -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="p-5 rounded-2xl apple-glass-card">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Jenis Bahan</span>
-            <div class="text-2xl font-bold text-slate-900 mt-1">{{ $totalMaterials }}</div>
-            <span class="text-[11px] text-slate-400 mt-1 block">Tersedia di gudang Sentul</span>
-        </div>
-
-        <div class="p-5 rounded-2xl apple-glass-card">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Estimasi Nilai Bahan</span>
-            <div class="text-2xl font-bold text-slate-900 mt-1">Rp {{ number_format($totalStockValue, 0, ',', '.') }}</div>
-            <span class="text-[11px] text-slate-400 mt-1 block">Total valuasi inventaris bahan</span>
-        </div>
-
-        <div class="p-5 rounded-2xl apple-glass-card">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Stok Menipis</span>
-            <div class="text-2xl font-bold {{ $lowStockCount > 0 ? 'text-amber-600' : 'text-slate-900' }} mt-1">
-                {{ $lowStockCount }}
-            </div>
-            <span class="text-[11px] text-slate-400 mt-1 block">Bahan di bawah batas minimum</span>
-        </div>
-    </div>
-
     <!-- Main Table: Daftar Bahan Baku Gudang -->
-    <div class="apple-glass-panel rounded-3xl p-6 shadow-md">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+    <div class="bg-white rounded-2xl border border-slate-300 p-6 shadow-sm space-y-4">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-2">
             <div class="flex items-center gap-2">
                 <h3 class="text-sm font-bold text-slate-900">Daftar Stok Bahan Baku</h3>
-                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-900 text-white">
                     {{ $materials->total() }} Bahan
                 </span>
             </div>
 
             <!-- Search & Category Filters -->
             <form action="{{ route('production.materials.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
-                <select name="category" onchange="this.form.submit()" class="text-xs px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-800 focus:outline-none">
+                <select name="category" onchange="this.form.submit()" class="text-xs px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 font-semibold focus:border-slate-900 focus:outline-none">
                     <option value="">Semua Kategori</option>
                     @foreach($categories as $cat)
                         <option value="{{ $cat }}" {{ request('category') === $cat ? 'selected' : '' }}>{{ $cat }}</option>
@@ -74,15 +48,15 @@
                         name="search" 
                         value="{{ request('search') }}" 
                         placeholder="Cari kode/nama/kategori..." 
-                        class="text-xs px-3 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-800 placeholder-slate-400 w-44 md:w-56 focus:outline-none"
+                        class="text-xs px-3.5 py-1.5 rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-500 w-44 md:w-56 focus:border-slate-900 focus:outline-none"
                     >
                 </div>
 
-                <button type="submit" class="px-3 py-1.5 rounded-xl bg-slate-800 text-white text-xs font-semibold hover:bg-slate-900 transition">
+                <button type="submit" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition">
                     Cari
                 </button>
                 @if(request('search') || request('category'))
-                    <a href="{{ route('production.materials.index') }}" class="px-2.5 py-1.5 text-xs text-slate-500 hover:text-slate-800 transition">
+                    <a href="{{ route('production.materials.index') }}" class="px-2.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 underline transition">
                         Reset
                     </a>
                 @endif
@@ -90,91 +64,116 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full min-w-[1100px] text-left text-xs">
                 <thead>
-                    <tr class="border-b border-slate-900/10 text-slate-500 font-bold uppercase tracking-wider">
-                        <th class="py-2.5 px-3">Kode</th>
-                        <th class="py-2.5 px-3">Nama Bahan Baku</th>
-                        <th class="py-2.5 px-3">Kategori</th>
-                        <th class="py-2.5 px-3 text-right">Stok Gudang</th>
-                        <th class="py-2.5 px-3">Timbang Terakhir</th>
-                        <th class="py-2.5 px-3 text-right">Biaya / Unit</th>
-                        <th class="py-2.5 px-3 text-center">Status</th>
-                        <th class="py-2.5 px-3 text-center">Aksi</th>
+                    <tr class="bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                        <th class="py-3 px-3.5 whitespace-nowrap">Kode</th>
+                        <th class="py-3 px-3.5 min-w-[160px]">Nama Bahan Baku</th>
+                        <th class="py-3 px-3.5 whitespace-nowrap">Kategori</th>
+                        <th class="py-3 px-3.5 text-right whitespace-nowrap">Stok Gudang</th>
+                        <th class="py-3 px-3.5 whitespace-nowrap">Timbang Terakhir</th>
+                        <th class="py-3 px-3.5 min-w-[140px]">Asal / Pemasok</th>
+                        <th class="py-3 px-3.5 text-center whitespace-nowrap">Status</th>
+                        <th class="py-3 px-3.5 text-center whitespace-nowrap">Riwayat Timbang</th>
+                        <th class="py-3 px-3.5 text-center whitespace-nowrap">Riwayat Proses</th>
+                        <th class="py-3 px-3.5 text-center whitespace-nowrap">Aksi</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-900/5">
+                <tbody class="divide-y divide-slate-200">
                     @forelse ($materials as $mat)
-                        <tr class="hover:bg-white/40 transition">
-                            <td class="py-3 px-3 font-mono font-semibold text-slate-900">
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-3.5 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
                                 {{ $mat->code }}
                             </td>
-                            <td class="py-3 px-3">
-                                <span class="font-bold text-slate-900 block">{{ $mat->name }}</span>
-                                <span class="text-[10px] text-slate-500">Min. Alert: {{ number_format($mat->minimum_stock, 1) }} {{ $mat->unit }}</span>
+                            <td class="py-3.5 px-3.5 min-w-[160px]">
+                                <span class="font-bold text-slate-900 block text-xs">{{ $mat->name }}</span>
+                                <span class="text-[11px] text-slate-600 block whitespace-nowrap">Min. Alert: {{ number_format($mat->minimum_stock, 1) }} {{ $mat->unit }}</span>
                             </td>
-                            <td class="py-3 px-3">
-                                <span class="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-800 border border-slate-200">
+                            <td class="py-3.5 px-3.5 whitespace-nowrap">
+                                <span class="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 whitespace-nowrap inline-block">
                                     {{ $mat->category }}
                                 </span>
                             </td>
-                            <td class="py-3 px-3 text-right">
-                                @php
-                                    $branchRows = $mat->activeBranches();
-                                    $unbranchedQuantity = $mat->unbranched_quantity;
-                                    $branchRowCount = $branchRows->count() + ($unbranchedQuantity > 0 ? 1 : 0);
-                                @endphp
-                                <button
-                                    type="button"
-                                    onclick="toggleBranchDetail({{ $mat->id }})"
-                                    aria-expanded="false"
-                                    aria-controls="branchDetail{{ $mat->id }}"
-                                    title="Lihat rincian branch"
-                                    class="inline-flex items-center gap-1.5 rounded-xl px-2 py-1 font-mono font-bold text-slate-900 transition hover:bg-slate-100">
-                                    <span>{{ number_format($mat->stock_quantity, 1) }} <span class="font-sans text-[10px] text-slate-500 font-normal">{{ $mat->unit }}</span></span>
-                                    <svg id="branchChevron{{ $mat->id }}" class="w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                    </svg>
-                                </button>
-                                <span class="block text-[9px] font-bold uppercase tracking-widest {{ $branchRows->count() > 1 ? 'text-indigo-700' : 'text-slate-400' }}">
-                                    {{ $branchRowCount === 0 ? 'Tanpa branch' : $branchRowCount.' branch' }}{{ $branchRows->count() > 1 ? ' · gabungan' : '' }}
-                                </span>
+                            <td class="py-3.5 px-3.5 text-right font-mono font-bold text-slate-900 text-xs whitespace-nowrap">
+                                {{ number_format($mat->stock_quantity, 1) }} <span class="font-sans text-[11px] text-slate-600 font-normal">{{ $mat->unit }}</span>
                             </td>
-                            <td class="py-3 px-3 text-slate-700 text-[11px] font-mono">
+                            <td class="py-3.5 px-3.5 text-slate-800 text-[11px] font-mono whitespace-nowrap">
                                 @if($mat->last_weighed_at)
-                                    <span class="font-semibold text-slate-900 block">{{ $mat->last_weighed_at->format('d/m/Y H:i') }} WIB</span>
+                                    <span class="font-bold text-slate-900 block whitespace-nowrap">{{ $mat->last_weighed_at->format('d/m/Y H:i') }} WIB</span>
                                     @if($mat->last_weighed_by)
-                                        <span class="text-[10px] text-slate-500 font-sans block">Oleh: {{ $mat->last_weighed_by }}</span>
+                                        <span class="text-[11px] text-slate-600 font-sans block whitespace-nowrap">Oleh: {{ $mat->last_weighed_by }}</span>
                                     @endif
                                 @else
                                     <span class="text-slate-400">-</span>
                                 @endif
                             </td>
-                            <td class="py-3 px-3 text-right font-mono text-slate-700">
-                                Rp {{ number_format($mat->unit_cost, 0, ',', '.') }}
+                            <td class="py-3.5 px-3.5 text-slate-800 text-xs min-w-[140px]">
+                                @if($mat->latestReceipt?->source_or_supplier)
+                                    <span class="font-semibold text-slate-900 block truncate max-w-[180px]" title="{{ $mat->latestReceipt->source_or_supplier }}">
+                                        {{ $mat->latestReceipt->source_or_supplier }}
+                                    </span>
+                                @elseif($mat->source_tembak_code)
+                                    <span class="text-[11px] font-mono text-slate-700 block whitespace-nowrap">Tembak: {{ $mat->source_tembak_code }}</span>
+                                @else
+                                    <span class="text-slate-400">-</span>
+                                @endif
                             </td>
-                            <td class="py-3 px-3 text-center">
+                            <td class="py-3.5 px-3.5 text-center whitespace-nowrap">
                                 @if($mat->stock_quantity <= 0)
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-700 border border-red-200">
+                                    <span class="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-900 text-white whitespace-nowrap inline-block">
                                         Habis
                                     </span>
                                 @elseif($mat->isLowStock())
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+                                    <span class="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 whitespace-nowrap inline-block">
                                         Menipis
                                     </span>
                                 @else
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    <span class="px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 whitespace-nowrap inline-block">
                                         Cukup
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-3 px-3 text-center">
-                                <div class="flex items-center justify-center gap-1.5">
+                            <td class="py-3.5 px-3.5 text-center whitespace-nowrap">
+                                @php
+                                    $recountCount = $mat->recountLogs->count();
+                                @endphp
+                                <button
+                                    type="button"
+                                    onclick="toggleRecountDetail({{ $mat->id }})"
+                                    aria-expanded="false"
+                                    aria-controls="recountDetail{{ $mat->id }}"
+                                    title="Lihat riwayat timbang ulang"
+                                    class="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold transition whitespace-nowrap {{ $recountCount > 0 ? 'bg-slate-100 text-slate-900 border border-slate-300 hover:bg-slate-200 shadow-xs' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-100' }}">
+                                    <span class="whitespace-nowrap">{{ $recountCount }} Riwayat</span>
+                                    <svg id="recountChevron{{ $mat->id }}" class="w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                            </td>
+                            <td class="py-3.5 px-3.5 text-center whitespace-nowrap">
+                                @php
+                                    $processCount = $mat->dryingLogs->count();
+                                @endphp
+                                <button
+                                    type="button"
+                                    onclick="toggleProcessDetail({{ $mat->id }})"
+                                    aria-expanded="false"
+                                    aria-controls="processDetail{{ $mat->id }}"
+                                    title="Lihat riwayat proses bahan baku"
+                                    class="inline-flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold transition whitespace-nowrap {{ $processCount > 0 ? 'bg-slate-100 text-slate-900 border border-slate-300 hover:bg-slate-200 shadow-xs' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-100' }}">
+                                    <span class="whitespace-nowrap">{{ $processCount }} Proses</span>
+                                    <svg id="processChevron{{ $mat->id }}" class="w-3.5 h-3.5 shrink-0 text-slate-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </button>
+                            </td>
+                            <td class="py-3.5 px-3.5 text-center whitespace-nowrap">
+                                <div class="flex items-center justify-center gap-1.5 whitespace-nowrap">
                                     <button 
                                         type="button" 
                                         onclick="openSortModal({{ $mat->id }}, '{{ addslashes($mat->code) }}', '{{ addslashes($mat->name) }}', {{ (float) $mat->stock_quantity }}, '{{ addslashes($mat->unit) }}')" 
                                         title="Split Bahan Baku"
-                                        class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 shadow-sm transition"
+                                        class="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white text-slate-900 border border-slate-300 hover:bg-slate-100 shadow-xs transition whitespace-nowrap"
                                     >
                                         Split
                                     </button>
@@ -183,7 +182,7 @@
                                         type="button" 
                                         onclick="openRecountModal({{ $mat->id }}, '{{ addslashes($mat->code) }}', '{{ addslashes($mat->name) }}', {{ (float) $mat->stock_quantity }}, '{{ addslashes($mat->unit) }}', '{{ addslashes($mat->last_weighed_by ?? '') }}')" 
                                         title="Timbang Ulang Stok Opname"
-                                        class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-slate-900 text-white hover:bg-slate-800 shadow-sm transition"
+                                        class="px-2.5 py-1 rounded-xl text-[11px] font-bold btn-dark shadow-xs transition whitespace-nowrap"
                                     >
                                         Timbang Ulang
                                     </button>
@@ -191,7 +190,7 @@
                                         type="button" 
                                         onclick="openEditModal({{ $mat->id }}, '{{ addslashes($mat->code) }}', '{{ addslashes($mat->name) }}', '{{ addslashes($mat->category) }}', {{ (float) $mat->minimum_stock }})" 
                                         title="Edit Data Bahan Baku"
-                                        class="px-2.5 py-1 rounded-xl text-[11px] font-semibold bg-white text-slate-800 border border-slate-300 hover:bg-slate-100 shadow-sm transition"
+                                        class="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white text-slate-900 border border-slate-300 hover:bg-slate-100 shadow-xs transition whitespace-nowrap"
                                     >
                                         Edit
                                     </button>
@@ -199,104 +198,203 @@
                             </td>
                         </tr>
 
-                        <tr id="branchDetail{{ $mat->id }}" class="hidden bg-slate-50/80">
-                            <td colspan="8" class="px-3 py-4">
-                                <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                                        <span class="text-[10px] font-bold text-slate-900 uppercase tracking-widest">
-                                            Rincian Branch — {{ $mat->name }}
-                                        </span>
-                                        <span class="font-mono text-[10px] font-bold text-slate-500">
-                                            Total {{ number_format($mat->stock_quantity, 2) }} {{ $mat->unit }}
-                                        </span>
+                        <tr id="recountDetail{{ $mat->id }}" class="hidden bg-slate-50">
+                            <td colspan="10" class="px-3.5 py-4">
+                                <div class="rounded-2xl border border-slate-300 bg-white p-4 shadow-xs">
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[10px] font-bold text-slate-900 uppercase tracking-widest">
+                                                Rincian Riwayat Timbang Ulang — [{{ $mat->code }}] {{ $mat->name }}
+                                            </span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300">
+                                                {{ $recountCount }} Catatan
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-3 text-[10px] font-mono">
+                                            <span class="text-slate-600">
+                                                Stok Saat Ini: <strong class="text-slate-900">{{ number_format($mat->stock_quantity, 2) }} {{ $mat->unit }}</strong>
+                                            </span>
+                                            @if($mat->last_weighed_at)
+                                                <span class="text-slate-300">·</span>
+                                                <span class="text-slate-600">
+                                                    Timbang Terakhir: <strong class="text-slate-900">{{ $mat->last_weighed_at->format('d/m/Y H:i') }} WIB</strong>
+                                                </span>
+                                            @endif
+                                        </div>
                                     </div>
 
-                                    @if($mat->hasBranchDiscrepancy())
-                                        <p class="mb-3 rounded-xl border border-red-200 bg-red-50 p-3 text-[10px] font-bold text-red-800">
-                                            Total branch ({{ number_format($mat->branched_quantity, 2) }} {{ $mat->unit }}) melebihi stok gudang. Data perlu ditinjau.
-                                        </p>
-                                    @endif
-
-                                    @if($branchRowCount === 0)
-                                        <p class="text-[10px] font-bold italic text-slate-400 uppercase tracking-widest">
-                                            Belum ada stok pada barang ini.
+                                    @if($recountCount === 0)
+                                        <p class="text-[11px] font-medium italic text-slate-500 py-3 text-center">
+                                            Belum ada catatan riwayat timbang ulang pada bahan baku ini.
                                         </p>
                                     @else
-                                        <table class="w-full text-left text-[11px]">
-                                            <thead>
-                                                <tr class="border-b border-slate-100 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                                                    <th class="py-2 pr-3">Kode Branch</th>
-                                                    <th class="py-2 pr-3">Asal</th>
-                                                    <th class="py-2 pr-3">Referensi</th>
-                                                    <th class="py-2 pr-3 text-right">Jumlah</th>
-                                                    <th class="py-2 pr-3 text-right">Porsi</th>
-                                                    <th class="py-2">Dicatat</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="divide-y divide-slate-50">
-                                                @foreach($branchRows as $branch)
-                                                    @php
-                                                        $sharePercentage = (float) $mat->stock_quantity > 0
-                                                            ? ((float) $branch->quantity / (float) $mat->stock_quantity) * 100
-                                                            : 0;
-                                                    @endphp
-                                                    <tr>
-                                                        <td class="py-2 pr-3">
-                                                            <span class="block font-mono font-bold text-slate-900">{{ $branch->branch_code }}</span>
-                                                            @if($branch->isCookLot())
-                                                                <span class="text-[9px] font-bold text-indigo-700 uppercase tracking-widest">Kode Masak</span>
-                                                            @endif
-                                                        </td>
-                                                        <td class="py-2 pr-3">
-                                                            <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[9px] font-bold text-slate-700 uppercase tracking-widest">
-                                                                {{ $branch->source_label }}
-                                                            </span>
-                                                        </td>
-                                                        <td class="py-2 pr-3 font-mono text-[10px] text-slate-600">{{ $branch->source_reference ?? '-' }}</td>
-                                                        <td class="py-2 pr-3 text-right font-mono font-bold text-slate-900">
-                                                            {{ number_format($branch->quantity, 2) }} {{ $mat->unit }}
-                                                        </td>
-                                                        <td class="py-2 pr-3 text-right font-mono text-[10px] font-bold text-slate-500">
-                                                            {{ number_format($sharePercentage, 1) }}%
-                                                        </td>
-                                                        <td class="py-2 text-[10px] text-slate-500">
-                                                            {{ $branch->created_at?->format('d/m/Y') ?? '-' }}
-                                                            @if($branch->notes)
-                                                                <span class="block text-[9px] text-slate-400">{{ $branch->notes }}</span>
-                                                            @endif
-                                                        </td>
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-left text-[11px]">
+                                                <thead>
+                                                    <tr class="bg-slate-100 text-slate-800 font-bold uppercase text-[9px] tracking-wider border-b border-slate-200">
+                                                        <th class="py-2.5 px-3">No. Referensi</th>
+                                                        <th class="py-2.5 px-3">Waktu Timbang</th>
+                                                        <th class="py-2.5 px-3">Petugas (PIC)</th>
+                                                        <th class="py-2.5 px-3 text-right">Hasil Timbang Fisik</th>
+                                                        <th class="py-2.5 px-3">Catatan / Alasan</th>
+                                                        <th class="py-2.5 px-3 text-center">Tanda Tangan</th>
                                                     </tr>
-                                                @endforeach
+                                                </thead>
+                                                <tbody class="divide-y divide-slate-200">
+                                                    @foreach($mat->recountLogs as $log)
+                                                        <tr class="hover:bg-slate-50/60 transition">
+                                                            <td class="py-2 pr-3 font-mono font-bold text-slate-900">
+                                                                {{ $log->reference_number }}
+                                                            </td>
+                                                            <td class="py-2 pr-3 text-slate-700 font-mono text-[10px]">
+                                                                {{ $log->movement_date ? $log->movement_date->format('d/m/Y H:i') : $log->created_at->format('d/m/Y H:i') }} WIB
+                                                            </td>
+                                                            <td class="py-2 pr-3">
+                                                                <span class="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                                                                    {{ $log->actor_by ?? 'Warehouse' }}
+                                                                </span>
+                                                            </td>
+                                                            <td class="py-2 pr-3 text-right font-mono font-bold text-slate-900">
+                                                                {{ number_format($log->quantity, 2) }} {{ $log->unit ?? $mat->unit }}
+                                                            </td>
+                                                            <td class="py-2 pr-3 text-slate-600 text-[10px]">
+                                                                {{ $log->notes ?: '-' }}
+                                                            </td>
+                                                            <td class="py-2 text-center">
+                                                                @if($log->signature_path)
+                                                                    <a href="{{ asset('storage/' . $log->signature_path) }}" target="_blank" class="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-900 hover:underline">
+                                                                        Lihat TTD
+                                                                    </a>
+                                                                @else
+                                                                    <span class="text-slate-400 text-[10px]">-</span>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    @endif
+                                </div>
+                            </td>
+                        </tr>
 
-                                                @if($unbranchedQuantity > 0)
-                                                    <tr class="bg-amber-50/60">
-                                                        <td class="py-2 pr-3 font-mono font-bold text-amber-900">Tanpa Branch</td>
-                                                        <td class="py-2 pr-3">
-                                                            <span class="rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[9px] font-bold text-amber-800 uppercase tracking-widest">
-                                                                Belum Teridentifikasi
-                                                            </span>
-                                                        </td>
-                                                        <td class="py-2 pr-3 font-mono text-[10px] text-amber-700">-</td>
-                                                        <td class="py-2 pr-3 text-right font-mono font-bold text-amber-900">
-                                                            {{ number_format($unbranchedQuantity, 2) }} {{ $mat->unit }}
-                                                        </td>
-                                                        <td class="py-2 pr-3 text-right font-mono text-[10px] font-bold text-amber-700">
-                                                            {{ number_format((float) $mat->stock_quantity > 0 ? ($unbranchedQuantity / (float) $mat->stock_quantity) * 100 : 0, 1) }}%
-                                                        </td>
-                                                        <td class="py-2 text-[10px] text-amber-700">
-                                                            Masuk dari alur yang belum mencatat branch.
-                                                        </td>
+                        <tr id="processDetail{{ $mat->id }}" class="hidden bg-slate-50">
+                            <td colspan="10" class="px-3.5 py-4">
+                                <div class="rounded-2xl border border-slate-300 bg-white p-4 shadow-xs">
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-[10px] font-bold text-slate-900 uppercase tracking-widest">
+                                                Rincian Riwayat Proses — [{{ $mat->code }}] {{ $mat->name }}
+                                            </span>
+                                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300">
+                                                {{ $processCount }} Proses Tercatat
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-3 text-[10px] font-mono">
+                                            <span class="text-slate-600">
+                                                Stok Saat Ini: <strong class="text-slate-900">{{ number_format($mat->stock_quantity, 2) }} {{ $mat->unit }}</strong>
+                                            </span>
+                                            @if($mat->category === 'KCB')
+                                                <a href="{{ route('production.dryings.create', ['material_id' => $mat->id]) }}" class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-sans text-[10px] font-bold hover:bg-slate-800 transition">
+                                                    + Jemur Bahan Ini
+                                                </a>
+                                            @endif
+                                        </div>
+                                    </div>
+
+                                    @if($processCount === 0)
+                                        <p class="text-[11px] font-medium italic text-slate-500 py-3 text-center">
+                                            Belum ada catatan riwayat proses (penjemuran/pengolahan) pada bahan baku ini.
+                                        </p>
+                                    @else
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-left text-[11px]">
+                                                <thead>
+                                                    <tr class="bg-slate-100 text-slate-800 font-bold uppercase text-[9px] tracking-wider border-b border-slate-200">
+                                                        <th class="py-2.5 px-3">Jenis Proses</th>
+                                                        <th class="py-2.5 px-3">Waktu Pelaksanaan</th>
+                                                        <th class="py-2.5 px-3 text-center">Lama Jemur</th>
+                                                        <th class="py-2.5 px-3 text-right">Berat Sebelum</th>
+                                                        <th class="py-2.5 px-3 text-right">Berat Sesudah</th>
+                                                        <th class="py-2.5 px-3 text-center">Status</th>
+                                                        <th class="py-2.5 px-3">Penanggung Jawab</th>
+                                                        <th class="py-2.5 px-3">Catatan</th>
+                                                        <th class="py-2.5 px-3 text-center">Aksi / Detail</th>
                                                     </tr>
-                                                @endif
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody class="divide-y divide-slate-200">
+                                                    @foreach($mat->dryingLogs as $dLog)
+                                                        <tr class="hover:bg-slate-50 transition">
+                                                            <td class="py-2.5 px-3">
+                                                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900 text-white">
+                                                                    Jemur Bahan
+                                                                </span>
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-slate-800 font-mono text-[10px]">
+                                                                <div>Mulai: {{ $dLog->start_date->format('d/m/Y') }} {{ $dLog->start_time ? '(' . $dLog->start_time . ')' : '' }}</div>
+                                                                @if($dLog->end_date)
+                                                                    <div class="text-slate-600 text-[10px] mt-0.5">Selesai: {{ $dLog->end_date->format('d/m/Y') }} {{ $dLog->end_time ? '(' . $dLog->end_time . ')' : '' }}</div>
+                                                                @endif
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-900">
+                                                                @if($dLog->drying_hours !== null)
+                                                                    {{ (float) $dLog->drying_hours }} Jam
+                                                                @else
+                                                                    <span class="text-slate-400">-</span>
+                                                                @endif
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-right font-mono font-semibold text-slate-800">
+                                                                {{ number_format($dLog->previous_weight, 2) }} {{ $mat->unit }}
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                                                                @if($dLog->new_weight !== null)
+                                                                    {{ number_format($dLog->new_weight, 2) }} {{ $mat->unit }}
+                                                                    @if((float) $dLog->shrinkage_weight > 0)
+                                                                        <span class="block text-[10px] text-slate-600 font-mono font-normal">-{{ number_format($dLog->shrinkage_weight, 2) }} (Susut)</span>
+                                                                    @endif
+                                                                @else
+                                                                    <span class="text-slate-400 font-normal">-</span>
+                                                                @endif
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-center">
+                                                                @if($dLog->status === 'menunggu')
+                                                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300">
+                                                                        Menjemur
+                                                                    </span>
+                                                                @else
+                                                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900 text-white">
+                                                                        Selesai
+                                                                    </span>
+                                                                @endif
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-slate-800 text-xs font-medium">
+                                                                {{ $dLog->pic_name }}
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-slate-600 text-xs max-w-xs truncate" title="{{ $dLog->notes }}">
+                                                                {{ $dLog->notes ?: '-' }}
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-center">
+                                                                @if($dLog->status === 'menunggu')
+                                                                    <a href="{{ route('production.dryings.report.create', $dLog->id) }}" class="px-2.5 py-1 rounded-xl bg-slate-900 text-white font-bold text-[10px] hover:bg-slate-800 shadow-xs transition inline-block">
+                                                                        Lapor
+                                                                    </a>
+                                                                @else
+                                                                    <span class="text-slate-400 text-[10px]">Tercatat</span>
+                                                                @endif
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     @endif
                                 </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="py-6 text-center text-slate-400">
+                            <td colspan="10" class="py-10 text-center text-slate-600 text-xs">
                                 Belum ada data bahan baku gudang.
                             </td>
                         </tr>
@@ -306,100 +404,87 @@
         </div>
 
         @if($materials->hasPages())
-            <div class="mt-4 pt-4 border-t border-slate-900/10">
+            <div class="pt-4 border-t border-slate-200">
                 {{ $materials->links() }}
             </div>
         @endif
     </div>
 
     <!-- Riwayat Alur Barang Gudang (Maximum 60 Data Terakhir) -->
-    <div class="apple-glass-panel rounded-3xl p-6 shadow-md">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div>
-                <h3 class="text-sm font-bold text-slate-900">Riwayat Alur Barang Gudang</h3>
-                <p class="text-[11px] text-slate-500 mt-0.5">Menampilkan 60 riwayat alur barang gudang terbaru (terakhir masuk di posisi atas).</p>
-            </div>
-            <div class="flex items-center gap-2">
-                <a href="{{ route('production.materials.export-logs') }}" class="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
-                    <svg class="w-4 h-4 text-emerald-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    <span>Export to Excel</span>
-                </a>
-                <a href="{{ route('production.materials.create-receipt') }}" class="px-3 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 text-xs font-semibold shadow-sm transition">
-                    + Input Barang Masuk
-                </a>
-            </div>
+    <div class="bg-white rounded-2xl border border-slate-300 p-6 shadow-sm space-y-4">
+        <div class="border-b border-slate-200 pb-3">
+            <h3 class="text-sm font-bold text-slate-900">Riwayat Alur Barang Gudang</h3>
+            <p class="text-xs text-slate-600 mt-0.5">Menampilkan 60 riwayat alur barang gudang terbaru (terakhir masuk di posisi atas).</p>
         </div>
 
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs">
+            <table class="w-full min-w-[1000px] text-left text-xs">
                 <thead>
-                    <tr class="border-b border-slate-900/10 text-slate-500 font-bold uppercase tracking-wider">
-                        <th class="py-2.5 px-3">Jenis Alur</th>
-                        <th class="py-2.5 px-3">No. Referensi</th>
-                        <th class="py-2.5 px-3">Bahan Baku</th>
-                        <th class="py-2.5 px-3 text-right">Kuantitas</th>
-                        <th class="py-2.5 px-3">Asal / Tujuan / Keterangan</th>
-                        <th class="py-2.5 px-3">Tanggal & Waktu</th>
-                        <th class="py-2.5 px-3">Petugas</th>
-                        <th class="py-2.5 px-3">Catatan</th>
+                    <tr class="bg-slate-100 text-slate-800 font-bold uppercase text-[10px] tracking-wider border-b border-slate-200">
+                        <th class="py-3 px-3.5 whitespace-nowrap">Jenis Alur</th>
+                        <th class="py-3 px-3.5 whitespace-nowrap">No. Referensi</th>
+                        <th class="py-3 px-3.5 min-w-[140px]">Bahan Baku</th>
+                        <th class="py-3 px-3.5 text-right whitespace-nowrap">Kuantitas</th>
+                        <th class="py-3 px-3.5 min-w-[160px]">Asal / Tujuan / Keterangan</th>
+                        <th class="py-3 px-3.5 whitespace-nowrap">Tanggal & Waktu</th>
+                        <th class="py-3 px-3.5 whitespace-nowrap">Petugas</th>
+                        <th class="py-3 px-3.5 min-w-[160px]">Catatan</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-900/5">
+                <tbody class="divide-y divide-slate-200">
                     @forelse ($recentLogs as $log)
-                        <tr class="hover:bg-white/40 transition">
-                            <td class="py-2.5 px-3">
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="py-3.5 px-3.5 whitespace-nowrap">
                                 @if($log->type === 'in')
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 whitespace-nowrap inline-block">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900 text-white whitespace-nowrap inline-block">
                                         Barang Masuk
                                     </span>
                                 @elseif($log->type === 'out')
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-200 whitespace-nowrap inline-block">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 whitespace-nowrap inline-block">
                                         Pemakaian Produksi
                                     </span>
                                 @else
-                                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-900 text-white shadow-sm whitespace-nowrap inline-block">
+                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300 whitespace-nowrap inline-block">
                                         Timbang Ulang
                                     </span>
                                 @endif
                             </td>
-                            <td class="py-2.5 px-3 font-mono font-semibold text-slate-900">
+                            <td class="py-3.5 px-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
                                 {{ $log->reference_number ?? '-' }}
                             </td>
-                            <td class="py-2.5 px-3 font-semibold text-slate-800">
+                            <td class="py-3.5 px-3.5 font-bold text-slate-900">
                                 {{ $log->material->name ?? '-' }}
                             </td>
-                            <td class="py-2.5 px-3 text-right font-mono font-bold">
+                            <td class="py-3.5 px-3.5 text-right font-mono font-bold text-slate-900 text-xs whitespace-nowrap">
                                 @if($log->type === 'in')
-                                    <span class="text-emerald-700">+{{ number_format($log->quantity, 1) }} {{ $log->unit }}</span>
+                                    <span>+{{ number_format($log->quantity, 1) }} {{ $log->unit }}</span>
                                 @elseif($log->type === 'out')
-                                    <span class="text-amber-800">-{{ number_format($log->quantity, 1) }} {{ $log->unit }}</span>
+                                    <span>-{{ number_format($log->quantity, 1) }} {{ $log->unit }}</span>
                                 @else
-                                    <span class="text-slate-900">{{ number_format($log->quantity, 1) }} {{ $log->unit }} <span class="font-sans text-[10px] font-normal text-slate-500">(Opname)</span></span>
+                                    <span>{{ number_format($log->quantity, 1) }} {{ $log->unit }} <span class="font-sans text-[10px] font-normal text-slate-600">(Opname)</span></span>
                                 @endif
                             </td>
-                            <td class="py-2.5 px-3 text-slate-700">
+                            <td class="py-3.5 px-3.5 text-slate-800 text-xs">
                                 {{ $log->source_or_destination ?? '-' }}
                             </td>
-                            <td class="py-2.5 px-3 text-slate-600 font-mono text-[11px]">
+                            <td class="py-3.5 px-3.5 text-slate-800 font-mono text-[11px] whitespace-nowrap">
                                 {{ $log->movement_date ? $log->movement_date->format('d/m/Y H:i') : '-' }} WIB
                             </td>
-                            <td class="py-2.5 px-3 text-slate-700 font-medium">
+                            <td class="py-3.5 px-3.5 text-slate-800 text-xs font-medium whitespace-nowrap">
                                 {{ $log->actor_by ?? '-' }}
                                 @if($log->signature_path)
                                     <div class="mt-1">
-                                        <img src="{{ asset('storage/' . $log->signature_path) }}" alt="Tanda Tangan" class="h-6 w-auto object-contain border border-slate-200 rounded p-0.5 bg-white">
+                                        <img src="{{ asset('storage/' . $log->signature_path) }}" alt="Tanda Tangan" class="h-6 w-auto object-contain border border-slate-300 rounded p-0.5 bg-white">
                                     </div>
                                 @endif
                             </td>
-                            <td class="py-2.5 px-3 text-slate-500 text-[11px] max-w-xs truncate">
+                            <td class="py-3.5 px-3.5 text-slate-600 text-xs max-w-xs truncate">
                                 {{ $log->notes ?? '-' }}
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="py-6 text-center text-slate-400">
+                            <td colspan="8" class="py-10 text-center text-slate-600 text-xs">
                                 Belum ada riwayat alur barang gudang.
                             </td>
                         </tr>
@@ -409,75 +494,6 @@
         </div>
     </div>
 
-</div>
-
-<!-- Modal Tambah Jenis Bahan Baku Baru -->
-<div id="newMaterialModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-    <div class="apple-glass-panel bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-3xl p-6 max-w-md w-full shadow-2xl relative">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-900/10">
-            <h3 class="text-sm font-bold text-slate-900">Tambah Jenis Bahan Baku Baru</h3>
-            <button type="button" onclick="closeNewMaterialModal()" class="text-slate-400 hover:text-slate-700 text-lg font-bold">
-                ✕
-            </button>
-        </div>
-
-        <form action="{{ route('production.materials.store') }}" method="POST" class="mt-4 space-y-3">
-            @csrf
-
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Kode Bahan</label>
-                    <input type="text" name="code" required placeholder="MAT-GHR-008" class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono">
-                </div>
-                <div class="relative overflow-visible">
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Kategori</label>
-                    <div class="relative">
-                        <input type="text" name="category" id="new_material_category" required autocomplete="off" placeholder="Pilih / ketik kategori..." class="w-full px-3 py-2 pr-7 rounded-xl text-xs apple-input cursor-pointer">
-                        <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </div>
-                    </div>
-                    <div id="newCategoryDropdown" class="hidden absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-300 shadow-2xl rounded-2xl z-50 overflow-hidden max-h-48 overflow-y-auto"></div>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Bahan Baku</label>
-                <input type="text" name="name" required placeholder="Nama lengkap bahan baku..." class="w-full px-3 py-2 rounded-xl text-xs apple-input">
-            </div>
-
-            <div class="grid grid-cols-3 gap-3">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Satuan</label>
-                    <input type="text" name="unit" required placeholder="kg / tola / pcs" class="w-full px-3 py-2 rounded-xl text-xs apple-input">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Stok Awal</label>
-                    <input type="number" step="0.01" name="stock_quantity" value="" placeholder="0.00" required class="w-full px-3 py-2 rounded-xl text-xs apple-input">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1">Min. Alert</label>
-                    <input type="number" step="0.01" name="minimum_stock" value="" placeholder="0.00" class="w-full px-3 py-2 rounded-xl text-xs apple-input">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Estimasi Biaya / Unit (Rp)</label>
-                <input type="number" step="100" name="unit_cost" value="" placeholder="0" class="w-full px-3 py-2 rounded-xl text-xs apple-input font-mono">
-            </div>
-
-            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
-                <button type="button" onclick="closeNewMaterialModal()" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition">
-                    Batal
-                </button>
-                <button type="submit" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm">
-                    Simpan Bahan
-                </button>
-            </div>
-        </form>
-    </div>
 </div>
 
 <!-- Modal Hitung Ulang Stok Opname -->
@@ -600,14 +616,29 @@
                 <input type="number" step="0.01" min="0" id="edit_minimum_stock" name="minimum_stock" required class="w-full px-3 py-2 rounded-xl text-xs apple-input text-slate-900 border-slate-300 font-mono">
             </div>
 
-            <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-900/10">
-                <button type="button" onclick="closeEditModal()" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
-                    Batal
+            <div class="flex items-center justify-between pt-3 border-t border-slate-900/10">
+                <button 
+                    type="button" 
+                    onclick="confirmDeleteMaterial()" 
+                    class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white text-slate-800 hover:bg-slate-100 border border-slate-300 shadow-sm transition"
+                >
+                    Hapus Bahan
                 </button>
-                <button type="submit" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm">
-                    Simpan Perubahan
-                </button>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeEditModal()" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-100 transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded-xl btn-dark text-xs font-semibold shadow-sm">
+                        Simpan Perubahan
+                    </button>
+                </div>
             </div>
+        </form>
+
+        <form id="deleteMaterialForm" method="POST" class="hidden">
+            @csrf
+            @method('DELETE')
         </form>
     </div>
 </div>
@@ -762,14 +793,13 @@
     </div>
 </div>
 
-
 <script>
     let currentSortSourceMaterialId = null;
     let currentSortSourceUnit = '';
 
-    function toggleBranchDetail(id) {
-        const detailRow = document.getElementById('branchDetail' + id);
-        const chevron = document.getElementById('branchChevron' + id);
+    function toggleRecountDetail(id) {
+        const detailRow = document.getElementById('recountDetail' + id);
+        const chevron = document.getElementById('recountChevron' + id);
 
         if (!detailRow) {
             return;
@@ -778,18 +808,24 @@
         const isHidden = detailRow.classList.toggle('hidden');
         chevron?.classList.toggle('rotate-180', !isHidden);
         document
-            .querySelector('[aria-controls="branchDetail' + id + '"]')
+            .querySelector('[aria-controls="recountDetail' + id + '"]')
             ?.setAttribute('aria-expanded', String(!isHidden));
     }
 
-    function openNewMaterialModal() {
-        document.getElementById('newMaterialModal').classList.remove('hidden');
-    }
-    function closeNewMaterialModal() {
-        document.getElementById('newMaterialModal').classList.add('hidden');
-    }
+    function toggleProcessDetail(id) {
+        const detailRow = document.getElementById('processDetail' + id);
+        const chevron = document.getElementById('processChevron' + id);
 
+        if (!detailRow) {
+            return;
+        }
 
+        const isHidden = detailRow.classList.toggle('hidden');
+        chevron?.classList.toggle('rotate-180', !isHidden);
+        document
+            .querySelector('[aria-controls="processDetail' + id + '"]')
+            ?.setAttribute('aria-expanded', String(!isHidden));
+    }
 
     function openSortModal(id, code, name, stock, unit) {
         currentSortSourceMaterialId = id;
@@ -994,17 +1030,42 @@
         document.getElementById('recountMaterialModal').classList.add('hidden');
     }
 
+    let currentEditMaterialId = null;
+    let currentEditMaterialCode = '';
+    let currentEditMaterialName = '';
+
     function openEditModal(id, code, name, category, minStock) {
+        currentEditMaterialId = id;
+        currentEditMaterialCode = code;
+        currentEditMaterialName = name;
+
         const modal = document.getElementById('editMaterialModal');
         const form = document.getElementById('editMaterialForm');
+        const deleteForm = document.getElementById('deleteMaterialForm');
         
         form.action = `/production/materials/${id}`;
+        if (deleteForm) {
+            deleteForm.action = `/production/materials/${id}`;
+        }
+
         document.getElementById('edit_code').value = code;
         document.getElementById('edit_name').value = name;
         document.getElementById('edit_category').value = category;
         document.getElementById('edit_minimum_stock').value = minStock;
 
         modal.classList.remove('hidden');
+    }
+
+    function confirmDeleteMaterial() {
+        if (!currentEditMaterialId) return;
+
+        const label = currentEditMaterialCode ? `[${currentEditMaterialCode}] ${currentEditMaterialName}` : currentEditMaterialName;
+        if (confirm(`Apakah Anda yakin ingin menghapus data bahan baku "${label}" dari gudang?`)) {
+            const deleteForm = document.getElementById('deleteMaterialForm');
+            if (deleteForm) {
+                deleteForm.submit();
+            }
+        }
     }
 
     function closeEditModal() {
@@ -1100,7 +1161,6 @@
     }
 
     const availableCategories = @json($categories);
-    setupCategoryCombobox('new_material_category', 'newCategoryDropdown', availableCategories);
     setupCategoryCombobox('edit_category', 'editCategoryDropdown', availableCategories);
     setupCategoryCombobox('sort_new_category', 'sortCategoryDropdown', availableCategories);
 </script>

@@ -1,51 +1,32 @@
 @extends('layouts.app', ['title' => 'Edit Pelanggan'])
 
 @section('content')
-<div class="max-w-2xl mx-auto space-y-6">
-    <div class="flex items-center justify-between">
-        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Edit Pelanggan: {{ $customer->name }}</h2>
-        <a href="{{ route('customers.index') }}" class="text-xs font-bold text-slate-500 hover:text-slate-900">Kembali</a>
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 apple-glass-card rounded-2xl p-6">
+        <div>
+            <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider mb-2">
+                <span>Modul Pelanggan</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Edit Pelanggan: {{ $customer->name ?? '' }}</h1>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium mt-1">Kanvas formulir edit pelanggan siap dirancang ulang.</p>
+        </div>
+        <div>
+            <a href="{{ route('customers.index') }}" class="px-4 py-2 rounded-xl bg-white text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-bold transition">
+                ← Kembali ke Daftar
+            </a>
+        </div>
     </div>
 
-    <div class="apple-glass-card rounded-2xl p-8 border border-white">
-        <form action="{{ route('customers.update', $customer) }}" method="POST" class="space-y-5">
-            @csrf
-            @method('PUT')
-            <div>
-                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Nama Perusahaan / Klien *</label>
-                <input type="text" name="name" value="{{ old('name', $customer->name) }}" required class="w-full rounded-xl apple-input px-4 py-2.5 text-sm font-medium">
-                @error('name')<span class="text-xs text-slate-900 mt-1 block font-bold">{{ $message }}</span>@enderror
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Email *</label>
-                    <input type="email" name="email" value="{{ old('email', $customer->email) }}" required class="w-full rounded-xl apple-input px-4 py-2.5 text-sm font-medium">
-                    @error('email')<span class="text-xs text-slate-900 mt-1 block font-bold">{{ $message }}</span>@enderror
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Nomor Telepon *</label>
-                    <input type="text" name="phone" value="{{ old('phone', $customer->phone) }}" required class="w-full rounded-xl apple-input px-4 py-2.5 text-sm font-medium">
-                    @error('phone')<span class="text-xs text-slate-900 mt-1 block font-bold">{{ $message }}</span>@enderror
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Alamat Lengkap *</label>
-                <textarea name="address" rows="3" required class="w-full rounded-xl apple-input px-4 py-2.5 text-sm font-medium">{{ old('address', $customer->address) }}</textarea>
-                @error('address')<span class="text-xs text-slate-900 mt-1 block font-bold">{{ $message }}</span>@enderror
-            </div>
-
-            <div class="flex items-center gap-2 pt-2">
-                <input type="checkbox" name="is_active" value="1" id="is_active" {{ $customer->is_active ? 'checked' : '' }} class="rounded border-slate-400 text-slate-900 focus:ring-slate-900">
-                <label for="is_active" class="text-sm font-bold text-slate-800">Setel Pelanggan Aktif</label>
-            </div>
-
-            <div class="pt-4 flex justify-end gap-3">
-                <a href="{{ route('customers.index') }}" class="px-5 py-2.5 rounded-full btn-subtle text-sm">Batal</a>
-                <button type="submit" class="px-6 py-2.5 rounded-full btn-dark text-sm">Perbarui Pelanggan</button>
-            </div>
-        </form>
+    <!-- Blank Form Canvas Area -->
+    <div class="apple-glass-panel rounded-3xl p-12 text-center border border-white/80 min-h-[400px] flex flex-col items-center justify-center">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-4">
+            <svg class="w-8 h-8 stroke-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+            </svg>
+        </div>
+        <h3 class="text-base font-bold text-slate-800 mb-1">Kanvas Form Edit Pelanggan</h3>
+        <p class="text-xs text-slate-500 max-w-md leading-relaxed">Formulir lama telah dibersihkan. Siap untuk penataan elemen pembaruan data pelanggan baru.</p>
     </div>
 </div>
 @endsection

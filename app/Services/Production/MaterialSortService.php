@@ -21,6 +21,19 @@ class MaterialSortService
             $sourceMaterial = Material::findOrFail($data['source_material_id']);
             $initialWeight = (float) $data['initial_weight'];
 
+            if ($sourceMaterial->category !== 'KCB') {
+                throw new InvalidArgumentException(
+                    "Hanya bahan baku berkategori KCB yang dapat diinisiasi untuk proses sortir ({$sourceMaterial->name} berkategori {$sourceMaterial->category})."
+                );
+            }
+
+            if ($sourceMaterial->isInActiveProcess()) {
+                $processName = $sourceMaterial->getActiveProcessName() ?? 'lain';
+                throw new InvalidArgumentException(
+                    "Bahan baku {$sourceMaterial->name} sedang dalam proses {$processName} dan belum selesai."
+                );
+            }
+
             if ($sourceMaterial->stock_quantity < $initialWeight) {
                 throw new InvalidArgumentException(
                     "Stok bahan mentah {$sourceMaterial->name} tidak mencukupi (Tersedia: {$sourceMaterial->stock_quantity} {$sourceMaterial->unit}, Dibutuhkan: {$initialWeight} {$sourceMaterial->unit})."
@@ -97,17 +110,19 @@ class MaterialSortService
             }
 
             $driedWeight = $totalResultWeight;
+            $returnedWeight = max(0, (float) ($data['returned_weight'] ?? 0));
             $initialWeight = (float) $sortBatch->initial_weight;
+            $totalOutput = round($driedWeight + $returnedWeight, 2);
 
             if ($driedWeight <= 0) {
                 throw new InvalidArgumentException('Total berat hasil sortir harus lebih besar dari 0.');
             }
 
-            if ($driedWeight > $initialWeight) {
-                throw new InvalidArgumentException("Total berat hasil sortir ({$driedWeight} kg) tidak boleh melebihi berat bahan baku awal ({$initialWeight} kg).");
+            if ($totalOutput > $initialWeight) {
+                throw new InvalidArgumentException("Total hasil sortir ({$driedWeight} kg) ditambah bahan yang dikembalikan ({$returnedWeight} kg) adalah {$totalOutput} kg, melebihi berat bahan baku awal ({$initialWeight} kg).");
             }
 
-            $dryingLoss = round($initialWeight - $driedWeight, 2);
+            $dryingLoss = round(max(0, $initialWeight - $totalOutput), 2);
 
             // Simpan Tanda Tangan Pelapor jika ada
             $reportSignaturePath = $this->saveSignature($data['report_signature_data'] ?? $data['signature_data'] ?? null, 'sig_report');
@@ -119,19 +134,50 @@ class MaterialSortService
             $sortBatch->update([
                 'status' => 'completed',
                 'dried_weight' => $driedWeight,
+                'returned_weight' => $returnedWeight,
                 'drying_loss_weight' => $dryingLoss,
                 'report_date' => $reportDate,
                 'report_pic_name' => $reportPic,
                 'report_signature_path' => $reportSignaturePath,
             ]);
 
+            // Jika ada sisa bahan mentah yang dikembalikan ke gudang, kembalikan stok bahan mentah asal
+            if ($returnedWeight > 0) {
+                $sourceMaterial = $sortBatch->sourceMaterial;
+                if ($sourceMaterial) {
+                    $sourceMaterial->increment('stock_quantity', $returnedWeight);
+                    $sourceMaterial->update([
+                        'last_weighed_at' => now(),
+                        'last_weighed_by' => $reportPic,
+                    ]);
+
+                    MaterialLog::create([
+                        'material_id' => $sourceMaterial->id,
+                        'type' => 'in',
+                        'reference_number' => $sortBatch->sort_code,
+                        'quantity' => $returnedWeight,
+                        'unit' => $sourceMaterial->unit,
+                        'actor_by' => $reportPic,
+                        'source_or_destination' => "Pengembalian Sisa Sortir {$sortBatch->sort_code}",
+                        'movement_date' => $reportDate,
+                        'notes' => 'Pengembalian sisa bahan mentah yang tidak selesai disortir ke gudang.',
+                        'signature_path' => $reportSignaturePath,
+                    ]);
+                }
+            }
+
             $sourceMaterialName = $sortBatch->sourceMaterial?->name ?? 'Bahan Mentah';
             $sourceUnit = strtolower(trim($sortBatch->sourceMaterial?->unit ?? 'kg'));
 
-            // Validasi satuan setiap item hasil sortir harus sama dengan bahan baku asal
+            // Validasi satuan dan kategori setiap item hasil sortir
             foreach ($items as $item) {
                 if (empty($item['target_material_id'])) {
                     continue;
+                }
+                if ((int) $item['target_material_id'] === (int) $sortBatch->source_material_id) {
+                    throw new InvalidArgumentException(
+                        "Bahan hasil sortir tidak boleh sama dengan bahan baku mentah asal ({$sortBatch->sourceMaterial?->name})."
+                    );
                 }
                 $targetMaterial = Material::findOrFail($item['target_material_id']);
                 $targetUnit = strtolower(trim($targetMaterial->unit));
@@ -141,7 +187,17 @@ class MaterialSortService
                         "Satuan bahan hasil sortir [{$targetMaterial->code}] {$targetMaterial->name} ({$targetMaterial->unit}) tidak sesuai dengan satuan bahan mentah asal ({$sortBatch->sourceMaterial?->unit}). Pembagian hasil sortir harus menggunakan satuan yang sama."
                     );
                 }
+
+                $targetCat = strtolower(trim((string) $targetMaterial->category));
+                if (! in_array($targetCat, ['bahan tembak', 'bahan potong ukir', 'bahan ukir potong'], true)) {
+                    throw new InvalidArgumentException(
+                        "Bahan hasil sortir [{$targetMaterial->name}] harus berkategori Bahan Tembak atau Bahan Potong Ukir (kategori saat ini: {$targetMaterial->category})."
+                    );
+                }
             }
+
+            // Hapus item draft lama jika ada
+            $sortBatch->items()->delete();
 
             // Simpan setiap item hasil sortir & tambahkan ke stok bahan siap tembak di gudang
             foreach ($items as $item) {
@@ -179,6 +235,54 @@ class MaterialSortService
                     'notes' => $item['notes'] ?? 'Penerimaan bahan kayu siap tembak hasil sortir.',
                     'signature_path' => $reportSignaturePath,
                 ]);
+            }
+
+            return $sortBatch->fresh(['sourceMaterial', 'items.targetMaterial']);
+        });
+    }
+
+    /**
+     * Simpan progres laporan sortir sementara (draft) tanpa mengubah stok gudang.
+     */
+    public function saveDraftSortReport(MaterialSortBatch $sortBatch, array $data): MaterialSortBatch
+    {
+        return DB::transaction(function () use ($sortBatch, $data) {
+            if ($sortBatch->isCompleted()) {
+                throw new InvalidArgumentException("Batch sortir {$sortBatch->sort_code} sudah pernah diselesaikan.");
+            }
+
+            $reportPic = ! empty($data['report_pic_name']) ? $data['report_pic_name'] : $sortBatch->report_pic_name;
+            $reportDate = ! empty($data['report_date']) ? $data['report_date'] : $sortBatch->report_date;
+            $returnedWeight = isset($data['returned_weight']) && $data['returned_weight'] !== '' ? max(0, (float) $data['returned_weight']) : (float) ($sortBatch->returned_weight ?? 0);
+
+            $sortBatch->update([
+                'report_date' => $reportDate,
+                'report_pic_name' => $reportPic,
+                'returned_weight' => $returnedWeight,
+                'notes' => $data['notes'] ?? $sortBatch->notes,
+            ]);
+
+            // Bersihkan item draft lama sebelum menyimpan item baru
+            $sortBatch->items()->delete();
+
+            $items = $data['items'] ?? [];
+            if (is_array($items)) {
+                foreach ($items as $item) {
+                    if (empty($item['target_material_id']) || (int) $item['target_material_id'] === (int) $sortBatch->source_material_id) {
+                        continue;
+                    }
+                    $resultWeight = (float) ($item['result_weight'] ?? 0);
+                    if ($resultWeight <= 0) {
+                        continue;
+                    }
+
+                    MaterialSortItem::create([
+                        'material_sort_batch_id' => $sortBatch->id,
+                        'target_material_id' => $item['target_material_id'],
+                        'result_weight' => $resultWeight,
+                        'notes' => $item['notes'] ?? null,
+                    ]);
+                }
             }
 
             return $sortBatch->fresh(['sourceMaterial', 'items.targetMaterial']);

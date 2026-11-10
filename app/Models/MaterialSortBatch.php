@@ -17,6 +17,7 @@ class MaterialSortBatch extends Model
         'source_material_id',
         'initial_weight',
         'dried_weight',
+        'returned_weight',
         'drying_loss_weight',
         'sort_date',
         'report_date',
@@ -30,6 +31,7 @@ class MaterialSortBatch extends Model
     protected $casts = [
         'initial_weight' => 'decimal:2',
         'dried_weight' => 'decimal:2',
+        'returned_weight' => 'decimal:2',
         'drying_loss_weight' => 'decimal:2',
         'sort_date' => 'date',
         'report_date' => 'date',

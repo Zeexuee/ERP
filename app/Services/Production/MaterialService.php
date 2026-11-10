@@ -313,6 +313,19 @@ class MaterialService
      */
     public function initiateDryingLog(Material $material, array $data): MaterialDryingLog
     {
+        if ($material->category !== 'KCB') {
+            throw new \InvalidArgumentException('Hanya bahan baku berkategori KCB yang dapat dijemur.');
+        }
+
+        if ($material->stock_quantity <= 0) {
+            throw new \InvalidArgumentException('Bahan baku ini tidak memiliki stok yang tersedia untuk dijemur.');
+        }
+
+        if ($material->isInActiveProcess()) {
+            $processName = $material->getActiveProcessName() ?? 'lain';
+            throw new \InvalidArgumentException("Bahan baku [{$material->code}] {$material->name} sedang dalam proses {$processName}.");
+        }
+
         return DB::transaction(function () use ($material, $data) {
             $previousWeight = (float) $material->stock_quantity;
 
@@ -329,6 +342,7 @@ class MaterialService
 
             return $material->dryingLogs()->create([
                 'start_date' => $data['start_date'],
+                'start_time' => $data['start_time'] ?? date('H:i'),
                 'previous_weight' => $previousWeight,
                 'pic_name' => $data['pic_name'],
                 'notes' => $data['notes'] ?? null,
@@ -374,8 +388,31 @@ class MaterialService
 
             $picName = $data['pic_name'] ?? $log->pic_name;
 
+            $startTime = $data['start_time'] ?? $log->start_time ?? '08:00';
+            $endTime = $data['end_time'] ?? date('H:i');
+            $dryingHours = null;
+
+            if ($startTime && $endTime) {
+                $startParts = explode(':', $startTime);
+                $endParts = explode(':', $endTime);
+                $startMinutes = ((int) $startParts[0] * 60) + (int) ($startParts[1] ?? 0);
+                $endMinutes = ((int) $endParts[0] * 60) + (int) ($endParts[1] ?? 0);
+
+                $diffMinutes = $endMinutes - $startMinutes;
+                if ($diffMinutes < 0) {
+                    $diffMinutes += 24 * 60;
+                }
+
+                $dryingHours = round($diffMinutes / 60, 2);
+            } elseif (isset($data['drying_hours'])) {
+                $dryingHours = (float) $data['drying_hours'];
+            }
+
             $log->update([
                 'end_date' => $data['end_date'],
+                'start_time' => $startTime,
+                'end_time' => $endTime,
+                'drying_hours' => $dryingHours,
                 'new_weight' => $newWeight,
                 'shrinkage_weight' => $shrinkage,
                 'status' => 'selesai',

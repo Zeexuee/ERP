@@ -1,50 +1,32 @@
-@extends('layouts.app', ['title' => 'Tambah Pelanggan'])
+@extends('layouts.app', ['title' => 'Tambah Pelanggan Baru'])
 
 @section('content')
-<div class="max-w-2xl mx-auto space-y-6">
-    <div class="flex items-center justify-between">
-        <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Form Pelanggan Baru</h2>
-        <a href="{{ route('customers.index') }}" class="text-xs font-bold text-slate-500 hover:text-slate-900">Kembali</a>
+<div class="space-y-6">
+    <!-- Header Section -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 apple-glass-card rounded-2xl p-6">
+        <div>
+            <div class="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider mb-2">
+                <span>Modul Pelanggan</span>
+            </div>
+            <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Tambah Pelanggan Baru</h1>
+            <p class="text-xs sm:text-sm text-slate-500 font-medium mt-1">Kanvas formulir baru siap dirancang sesuai alur kebutuhan terkini.</p>
+        </div>
+        <div>
+            <a href="{{ route('customers.index') }}" class="px-4 py-2 rounded-xl bg-white text-slate-700 hover:text-slate-900 border border-slate-200 text-xs font-bold transition">
+                ← Kembali ke Daftar
+            </a>
+        </div>
     </div>
 
-    <div class="apple-glass-card rounded-2xl p-8 border border-white">
-        <form action="{{ route('customers.store') }}" method="POST" class="space-y-5">
-            @csrf
-            <div>
-                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Nama Perusahaan / Klien *</label>
-                <input type="text" name="name" value="{{ old('name') }}" required class="w-full rounded-xl apple-input px-4 py-2.5 text-sm font-medium" placeholder="PT Contoh Sejahtera">
-                @error('name')<span class="text-xs text-slate-900 mt-1 block font-bold">{{ $message }}</span>@enderror
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Email *</label>
-                    <input type="email" name="email" value="{{ old('email') }}" required class="w-full rounded-xl apple-input px-4 py-2.5 text-sm font-medium" placeholder="info@perusahaan.com">
-                    @error('email')<span class="text-xs text-slate-900 mt-1 block font-bold">{{ $message }}</span>@enderror
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Nomor Telepon *</label>
-                    <input type="text" name="phone" value="{{ old('phone') }}" required class="w-full rounded-xl apple-input px-4 py-2.5 text-sm font-medium" placeholder="021-5551234">
-                    @error('phone')<span class="text-xs text-slate-900 mt-1 block font-bold">{{ $message }}</span>@enderror
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2">Alamat Lengkap *</label>
-                <textarea name="address" rows="3" required class="w-full rounded-xl apple-input px-4 py-2.5 text-sm font-medium" placeholder="Jl. Sudirman No. 123..."></textarea>
-                @error('address')<span class="text-xs text-slate-900 mt-1 block font-bold">{{ $message }}</span>@enderror
-            </div>
-
-            <div class="flex items-center gap-2 pt-2">
-                <input type="checkbox" name="is_active" value="1" id="is_active" checked class="rounded border-slate-400 text-slate-900 focus:ring-slate-900">
-                <label for="is_active" class="text-sm font-bold text-slate-800">Setel Pelanggan Aktif</label>
-            </div>
-
-            <div class="pt-4 flex justify-end gap-3">
-                <a href="{{ route('customers.index') }}" class="px-5 py-2.5 rounded-full btn-subtle text-sm">Batal</a>
-                <button type="submit" class="px-6 py-2.5 rounded-full btn-dark text-sm">Simpan Pelanggan</button>
-            </div>
-        </form>
+    <!-- Blank Form Canvas Area -->
+    <div class="apple-glass-panel rounded-3xl p-12 text-center border border-white/80 min-h-[400px] flex flex-col items-center justify-center">
+        <div class="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 mb-4">
+            <svg class="w-8 h-8 stroke-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+            </svg>
+        </div>
+        <h3 class="text-base font-bold text-slate-800 mb-1">Kanvas Form Tambah Pelanggan</h3>
+        <p class="text-xs text-slate-500 max-w-md leading-relaxed">Formulir lama telah dibersihkan. Siap untuk penataan elemen input, validasi, dan data penanggung jawab baru.</p>
     </div>
 </div>
 @endsection

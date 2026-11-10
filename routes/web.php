@@ -101,6 +101,7 @@ Route::middleware('auth')->group(function () {
         Route::get('materials/export-logs', [MaterialController::class, 'exportLogs'])->name('materials.export-logs');
         Route::post('materials', [MaterialController::class, 'storeMaterial'])->name('materials.store');
         Route::put('materials/{material}', [MaterialController::class, 'updateMaterial'])->name('materials.update');
+        Route::delete('materials/{material}', [MaterialController::class, 'destroyMaterial'])->name('materials.destroy');
         Route::post('materials/{material}/recount', [MaterialController::class, 'recountMaterial'])->name('materials.recount');
         Route::post('materials/{material}/sort', [MaterialController::class, 'sortMaterial'])->name('materials.sort');
         Route::post('materials/{material}/split', [MaterialController::class, 'sortMaterial'])->name('materials.split');

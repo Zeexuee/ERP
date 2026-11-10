@@ -26,7 +26,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-800 mb-1">
-                        No. Bukti Penerimaan
+                        Nomor Unik Sistem
                     </label>
                     <input 
                         type="text" 
@@ -61,17 +61,23 @@
                     <label for="material_name" class="block text-xs font-semibold text-slate-800 mb-1">
                         Nama Bahan Baku <span class="text-red-500">*</span>
                     </label>
-                    <input 
-                        type="text" 
-                        id="material_name" 
-                        name="material_name" 
-                        value="{{ old('material_name') }}" 
-                        required 
-                        autocomplete="off"
-                        oninput="onMaterialNameInput(this.value)"
-                        onfocus="onMaterialNameInput(this.value)"
-                        class="w-full px-3 py-2 rounded-xl text-xs apple-input bg-white text-slate-900 font-medium border-slate-300"
-                    >
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="material_name" 
+                            name="material_name" 
+                            value="{{ old('material_name') }}" 
+                            required 
+                            autocomplete="off"
+                            placeholder="Pilih / ketik nama bahan baku..."
+                            class="w-full px-3 py-2 pr-7 rounded-xl text-xs apple-input bg-white text-slate-900 font-medium border-slate-300 cursor-pointer"
+                        >
+                        <div class="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </div>
+                    </div>
                     
                     <!-- Live Suggestions Dropdown Solid White Non-Transparent -->
                     <div id="materialSuggestions" class="hidden absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-300 shadow-2xl rounded-2xl z-50 overflow-hidden max-h-56 overflow-y-auto">
@@ -83,8 +89,8 @@
                     @enderror
                 </div>
 
-                <!-- Form Kategori & Satuan (Hanya muncul jika Bahan Baku Baru) -->
-                <div id="newMaterialFields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <!-- Informasi Kategori & Satuan Bahan Baku -->
+                <div id="newMaterialFields" class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
                     <div class="relative overflow-visible">
                         <label for="category" class="block text-xs font-semibold text-slate-800 mb-1">
                             Kategori Bahan Baku <span class="text-red-500">*</span>
@@ -278,107 +284,273 @@
 </div>
 
 <script>
-    const availableMaterials = @json($materials);
-
-    function onMaterialNameInput(value) {
-        const suggestionsBox = document.getElementById('materialSuggestions');
+    // Searchable Combobox with Register On-the-Fly and Delete ("x") for Material Name (Rule 7.1)
+    function setupMaterialCombobox(inputId, dropdownId, initialMaterials) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
         const materialIdInput = document.getElementById('material_id');
-        const unitCostInput = document.getElementById('unit_cost');
-
-        const query = value.trim().toLowerCase();
-
-        const matches = query ? availableMaterials.filter(mat => 
-            mat.name.toLowerCase().includes(query) || 
-            mat.code.toLowerCase().includes(query)
-        ) : availableMaterials;
-
-        let html = '';
-        let exactMatch = null;
-
-        // Opsi + Tambah Baru WAJIB selalu diposisikan di URUTAN PERTAMA / PALING ATAS (Rule 7.1)
-        const newLabel = value.trim() ? `"${value.trim()}"` : 'Bahan Baku';
-        html += `
-            <div 
-                onclick="selectNewMaterial('${escapeJs(value.trim())}')" 
-                class="px-3.5 py-2.5 bg-slate-900 text-white hover:bg-slate-800 cursor-pointer border-b border-slate-800 transition flex items-center justify-between"
-            >
-                <span class="text-xs font-bold">+ Tambah ${newLabel} Baru</span>
-                <span class="text-[10px] font-semibold opacity-80">Registrasi On-the-Fly</span>
-            </div>
-        `;
-
-        matches.forEach(mat => {
-            if (query && mat.name.toLowerCase() === query) {
-                exactMatch = mat;
-            }
-            html += `
-                <div 
-                    onclick="selectMaterial(${mat.id}, '${escapeJs(mat.name)}', '${escapeJs(mat.unit)}', ${mat.unit_cost || 0})" 
-                    class="px-3.5 py-2.5 hover:bg-slate-100 cursor-pointer border-b border-slate-100 last:border-0 transition"
-                >
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-slate-900">[${mat.code}] ${mat.name}</span>
-                        <span class="text-[11px] font-semibold text-slate-700">Stok: ${mat.stock_quantity} ${mat.unit}</span>
-                    </div>
-                </div>
-            `;
-        });
-
-        suggestionsBox.innerHTML = html;
-        suggestionsBox.classList.remove('hidden');
-
-        if (exactMatch) {
-            materialIdInput.value = exactMatch.id;
-            showNewMaterialFields(false, exactMatch.unit);
-            if (unitCostInput && !unitCostInput.value && exactMatch.unit_cost) {
-                unitCostInput.value = exactMatch.unit_cost;
-            }
-        } else if (query) {
-            materialIdInput.value = '';
-            showNewMaterialFields(true);
-        } else {
-            materialIdInput.value = '';
-            showNewMaterialFields(false);
-        }
-    }
-
-    function selectMaterial(id, name, unit, unitCost) {
-        document.getElementById('material_id').value = id;
-        document.getElementById('material_name').value = name;
-        document.getElementById('materialSuggestions').classList.add('hidden');
-
-        showNewMaterialFields(false, unit);
-
-        const unitCostInput = document.getElementById('unit_cost');
-        if (unitCostInput && unitCost) {
-            unitCostInput.value = unitCost;
-        }
-    }
-
-    function selectNewMaterial(name) {
-        document.getElementById('material_id').value = '';
-        document.getElementById('material_name').value = name;
-        document.getElementById('materialSuggestions').classList.add('hidden');
-        showNewMaterialFields(true);
-    }
-
-    function showNewMaterialFields(isNew, unitValue = 'kg') {
-        const newFields = document.getElementById('newMaterialFields');
         const unitSelect = document.getElementById('unit');
+        const categoryInput = document.getElementById('category');
+        const unitCostInput = document.getElementById('unit_cost');
+        if (!input || !dropdown) return;
 
-        if (isNew) {
-            newFields.classList.remove('hidden');
-            if (unitSelect) {
-                unitSelect.value = unitSelect.value || 'kg';
-                onUnitChange(unitSelect.value);
+        const customStorageKey = 'erp_material_receipt_custom_materials';
+        const deletedStorageKey = 'erp_material_receipt_deleted_materials';
+
+        function getStoredList(key) {
+            try {
+                const val = localStorage.getItem(key);
+                return val ? JSON.parse(val) : [];
+            } catch (e) {
+                return [];
             }
-        } else {
-            newFields.classList.add('hidden');
-            if (unitSelect && unitValue) {
-                unitSelect.value = unitValue;
-            }
-            onUnitChange(unitValue);
         }
+
+        function setStoredList(key, list) {
+            try {
+                localStorage.setItem(key, JSON.stringify(list));
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        let customList = getStoredList(customStorageKey);
+        let deletedList = getStoredList(deletedStorageKey);
+
+        function getAllMaterials() {
+            const combined = [...(Array.isArray(initialMaterials) ? initialMaterials : []), ...customList];
+            const unique = [];
+            combined.forEach(mat => {
+                if (!mat || !mat.name) return;
+                const nameTrimmed = mat.name.trim();
+                const isDeleted = deletedList.some(d => d.toLowerCase() === nameTrimmed.toLowerCase());
+                if (!isDeleted && !unique.some(u => u.name.toLowerCase() === nameTrimmed.toLowerCase())) {
+                    unique.push(mat);
+                }
+            });
+            return unique;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text || '';
+            return div.innerHTML;
+        }
+
+        function render(query = '') {
+            const q = (query || '').trim();
+            const qLower = q.toLowerCase();
+            const materials = getAllMaterials();
+
+            dropdown.innerHTML = '';
+
+            // Opsi + Tambah Baru / Register On-the-Fly WAJIB selalu di posisi PALING ATAS (Rule 7.1)
+            const topItem = document.createElement('div');
+            topItem.className = 'px-3.5 py-2.5 bg-slate-900 text-white hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800 transition select-none';
+
+            const hasExact = materials.some(m => m.name.toLowerCase() === qLower);
+
+            if (q.length > 0 && !hasExact) {
+                topItem.innerHTML = `
+                    <span class="text-xs font-bold">+ Tambahkan "<strong>${escapeHtml(q)}</strong>"</span>
+                    <span class="text-[10px] font-semibold opacity-80 uppercase tracking-wider">Register On-the-Fly</span>
+                `;
+                topItem.onmousedown = (e) => {
+                    e.preventDefault();
+                    registerNewMaterial(q);
+                };
+            } else {
+                topItem.innerHTML = `
+                    <span class="text-xs font-bold">+ Tambah Bahan Baku Baru...</span>
+                    <span class="text-[10px] font-semibold opacity-80 uppercase tracking-wider">Ketik Nama</span>
+                `;
+                topItem.onmousedown = (e) => {
+                    e.preventDefault();
+                    input.focus();
+                };
+            }
+            dropdown.appendChild(topItem);
+
+            const matches = materials.filter(m => {
+                if (!qLower) return true;
+                const nameMatch = m.name && m.name.toLowerCase().includes(qLower);
+                const codeMatch = m.code && m.code.toLowerCase().includes(qLower);
+                return nameMatch || codeMatch;
+            });
+
+            if (matches.length > 0) {
+                matches.forEach(mat => {
+                    const item = document.createElement('div');
+                    const isSelected = input.value && input.value.trim().toLowerCase() === mat.name.toLowerCase();
+                    item.className = `group px-3.5 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between border-b border-slate-100 last:border-0 transition select-none ${isSelected ? 'bg-slate-50 font-bold text-slate-900' : 'text-slate-700 text-xs'}`;
+
+                    const textWrap = document.createElement('div');
+                    textWrap.className = 'flex flex-col min-w-0 pr-2';
+
+                    const titleSpan = document.createElement('span');
+                    titleSpan.className = 'text-xs text-slate-900 font-bold truncate';
+                    titleSpan.innerText = mat.code ? `[${mat.code}] ${mat.name}` : mat.name;
+
+                    const subSpan = document.createElement('span');
+                    subSpan.className = 'text-[11px] font-semibold text-slate-500';
+                    if (mat.id) {
+                        subSpan.innerText = `Stok: ${mat.stock_quantity ?? 0} ${mat.unit || 'kg'}`;
+                    } else {
+                        subSpan.innerText = `Bahan Baru (${mat.unit || 'kg'})`;
+                    }
+
+                    textWrap.appendChild(titleSpan);
+                    textWrap.appendChild(subSpan);
+
+                    const actionWrap = document.createElement('div');
+                    actionWrap.className = 'flex items-center gap-1.5 shrink-0 ml-2';
+
+                    if (isSelected) {
+                        const selBadge = document.createElement('span');
+                        selBadge.className = 'text-[10px] font-semibold text-slate-500 mr-1';
+                        selBadge.innerText = 'Terpilih';
+                        actionWrap.appendChild(selBadge);
+                    }
+
+                    // Tombol Hapus per Item dengan Icon 'x'
+                    const delBtn = document.createElement('button');
+                    delBtn.type = 'button';
+                    delBtn.title = `Hapus "${mat.name}" dari daftar pilihan`;
+                    delBtn.className = 'p-1 rounded-md text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition';
+                    delBtn.innerHTML = `
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    `;
+                    delBtn.onmousedown = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    };
+                    delBtn.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deleteMaterial(mat);
+                    };
+                    actionWrap.appendChild(delBtn);
+
+                    item.appendChild(textWrap);
+                    item.appendChild(actionWrap);
+
+                    item.onmousedown = (e) => {
+                        if (e.target.closest('button')) return;
+                        e.preventDefault();
+                        selectMaterial(mat);
+                    };
+
+                    dropdown.appendChild(item);
+                });
+            } else if (q.length > 0) {
+                const noMatch = document.createElement('div');
+                noMatch.className = 'px-3.5 py-2 text-[11px] text-slate-400 italic';
+                noMatch.innerText = 'Bahan baku belum terdaftar. Klik opsi di atas untuk mendaftarkannya.';
+                dropdown.appendChild(noMatch);
+            }
+
+            dropdown.classList.remove('hidden');
+        }
+
+        function selectMaterial(mat) {
+            input.value = mat.name;
+            if (materialIdInput) {
+                materialIdInput.value = mat.id || '';
+            }
+            if (unitSelect && mat.unit) {
+                unitSelect.value = mat.unit;
+                onUnitChange(mat.unit);
+            }
+            if (categoryInput && mat.category) {
+                categoryInput.value = mat.category;
+            }
+            if (unitCostInput && mat.unit_cost) {
+                unitCostInput.value = mat.unit_cost;
+            }
+            dropdown.classList.add('hidden');
+        }
+
+        function registerNewMaterial(name) {
+            const trimmed = name.trim();
+            input.value = trimmed;
+            if (materialIdInput) {
+                materialIdInput.value = '';
+            }
+
+            deletedList = deletedList.filter(d => d.toLowerCase() !== trimmed.toLowerCase());
+            setStoredList(deletedStorageKey, deletedList);
+
+            const isInitial = (Array.isArray(initialMaterials) ? initialMaterials : []).some(
+                m => m.name && m.name.toLowerCase() === trimmed.toLowerCase()
+            );
+            if (!isInitial && !customList.some(c => c.name.toLowerCase() === trimmed.toLowerCase())) {
+                customList.push({
+                    id: null,
+                    code: 'BARU',
+                    name: trimmed,
+                    unit: unitSelect?.value || 'kg',
+                    category: categoryInput?.value || '',
+                    stock_quantity: 0,
+                    unit_cost: 0
+                });
+                setStoredList(customStorageKey, customList);
+            }
+
+            dropdown.classList.add('hidden');
+
+            if (categoryInput && !categoryInput.value) {
+                categoryInput.focus();
+            }
+        }
+
+        function deleteMaterial(mat) {
+            const name = mat.name.trim();
+            if (!deletedList.some(d => d.toLowerCase() === name.toLowerCase())) {
+                deletedList.push(name);
+                setStoredList(deletedStorageKey, deletedList);
+            }
+            customList = customList.filter(c => c.name.toLowerCase() !== name.toLowerCase());
+            setStoredList(customStorageKey, customList);
+
+            if (input.value && input.value.trim().toLowerCase() === name.toLowerCase()) {
+                input.value = '';
+                if (materialIdInput) materialIdInput.value = '';
+            }
+
+            render(input.value);
+        }
+
+        input.addEventListener('focus', () => render(input.value));
+        input.addEventListener('input', () => {
+            const val = input.value.trim().toLowerCase();
+            const all = getAllMaterials();
+            const exact = all.find(m => m.name.toLowerCase() === val);
+            if (exact && exact.id) {
+                materialIdInput.value = exact.id;
+                if (unitSelect && exact.unit) {
+                    unitSelect.value = exact.unit;
+                    onUnitChange(exact.unit);
+                }
+                if (categoryInput && exact.category) {
+                    categoryInput.value = exact.category;
+                }
+                if (unitCostInput && exact.unit_cost) {
+                    unitCostInput.value = exact.unit_cost;
+                }
+            } else {
+                materialIdInput.value = '';
+            }
+            render(input.value);
+        });
+        input.addEventListener('click', () => render(input.value));
+
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
     }
 
     function onUnitChange(unit) {
@@ -391,14 +563,6 @@
     function escapeJs(str) {
         return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
     }
-
-    document.addEventListener('click', (e) => {
-        const input = document.getElementById('material_name');
-        const suggestionsBox = document.getElementById('materialSuggestions');
-        if (input && suggestionsBox && !input.contains(e.target) && !suggestionsBox.contains(e.target)) {
-            suggestionsBox.classList.add('hidden');
-        }
-    });
 
     function previewImage(input) {
         const container = document.getElementById('imagePreviewContainer');
@@ -486,13 +650,50 @@
         if (signatureInput) signatureInput.value = '';
     }
 
-    // Searchable Combobox with Register On-the-Fly for Categories (Rule 7.1)
+    // Searchable Combobox with Register On-the-Fly and Delete per Item for Categories (Rule 7.1)
     function setupCategoryCombobox(inputId, dropdownId, initialCategories) {
         const input = document.getElementById(inputId);
         const dropdown = document.getElementById(dropdownId);
         if (!input || !dropdown) return;
 
-        let categories = Array.isArray(initialCategories) ? [...initialCategories] : [];
+        const customStorageKey = 'erp_material_receipt_custom_categories';
+        const deletedStorageKey = 'erp_material_receipt_deleted_categories';
+
+        function getStoredList(key) {
+            try {
+                const val = localStorage.getItem(key);
+                return val ? JSON.parse(val) : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function setStoredList(key, list) {
+            try {
+                localStorage.setItem(key, JSON.stringify(list));
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        let customList = getStoredList(customStorageKey);
+        let deletedList = getStoredList(deletedStorageKey);
+
+        function getAllCategories() {
+            const combined = [...(Array.isArray(initialCategories) ? initialCategories : []), ...customList];
+            const unique = [];
+            combined.forEach(cat => {
+                const trimmed = (cat || '').trim();
+                if (
+                    trimmed && 
+                    !deletedList.some(d => d.toLowerCase() === trimmed.toLowerCase()) &&
+                    !unique.some(u => u.toLowerCase() === trimmed.toLowerCase())
+                ) {
+                    unique.push(trimmed);
+                }
+            });
+            return unique;
+        }
 
         function escapeHtml(text) {
             const div = document.createElement('div');
@@ -503,12 +704,13 @@
         function render(query = '') {
             const q = (query || '').trim();
             const qLower = q.toLowerCase();
+            const categories = getAllCategories();
 
             dropdown.innerHTML = '';
 
             const topItem = document.createElement('div');
             topItem.className = 'px-3.5 py-2.5 bg-slate-900 text-white hover:bg-slate-800 cursor-pointer flex items-center justify-between border-b border-slate-800 transition select-none';
-            if (q.length > 0) {
+            if (q.length > 0 && !categories.some(c => c.toLowerCase() === qLower)) {
                 topItem.innerHTML = `
                     <span class="text-xs font-bold">+ Tambahkan "<strong>${escapeHtml(q)}</strong>"</span>
                     <span class="text-[10px] font-semibold opacity-80 uppercase tracking-wider">Register On-the-Fly</span>
@@ -535,15 +737,51 @@
                 matches.forEach(c => {
                     const item = document.createElement('div');
                     const isSelected = input.value && input.value.trim().toLowerCase() === c.toLowerCase();
-                    item.className = `px-3.5 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between border-b border-slate-100 last:border-0 transition select-none ${isSelected ? 'bg-slate-50 font-bold text-slate-900' : 'text-slate-700 text-xs'}`;
-                    item.innerHTML = `
-                        <span class="text-xs">${escapeHtml(c)}</span>
-                        ${isSelected ? '<span class="text-[10px] font-semibold text-slate-500">Terpilih</span>' : ''}
+                    item.className = `group px-3.5 py-2 hover:bg-slate-100 cursor-pointer flex items-center justify-between border-b border-slate-100 last:border-0 transition select-none ${isSelected ? 'bg-slate-50 font-bold text-slate-900' : 'text-slate-700 text-xs'}`;
+
+                    const labelSpan = document.createElement('span');
+                    labelSpan.className = 'text-xs text-slate-800 font-medium flex-1 truncate';
+                    labelSpan.innerText = c;
+
+                    const actionWrap = document.createElement('div');
+                    actionWrap.className = 'flex items-center gap-1.5 shrink-0 ml-2';
+
+                    if (isSelected) {
+                        const selBadge = document.createElement('span');
+                        selBadge.className = 'text-[10px] font-semibold text-slate-500 mr-1';
+                        selBadge.innerText = 'Terpilih';
+                        actionWrap.appendChild(selBadge);
+                    }
+
+                    const delBtn = document.createElement('button');
+                    delBtn.type = 'button';
+                    delBtn.title = `Hapus "${c}" dari daftar pilihan`;
+                    delBtn.className = 'p-1 rounded-md text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition';
+                    delBtn.innerHTML = `
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
                     `;
+                    delBtn.onmousedown = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    };
+                    delBtn.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deleteCat(c);
+                    };
+                    actionWrap.appendChild(delBtn);
+
+                    item.appendChild(labelSpan);
+                    item.appendChild(actionWrap);
+
                     item.onmousedown = (e) => {
+                        if (e.target.closest('button')) return;
                         e.preventDefault();
                         selectCat(c);
                     };
+
                     dropdown.appendChild(item);
                 });
             } else if (q.length > 0) {
@@ -558,29 +796,50 @@
 
         function selectCat(catName) {
             input.value = catName;
-            if (!categories.some(c => c.toLowerCase() === catName.toLowerCase())) {
-                categories.push(catName);
+            deletedList = deletedList.filter(d => d.toLowerCase() !== catName.toLowerCase());
+            setStoredList(deletedStorageKey, deletedList);
+
+            const isInitial = (Array.isArray(initialCategories) ? initialCategories : []).some(
+                i => i.toLowerCase() === catName.toLowerCase()
+            );
+            if (!isInitial && !customList.some(c => c.toLowerCase() === catName.toLowerCase())) {
+                customList.push(catName);
+                setStoredList(customStorageKey, customList);
             }
+
             dropdown.classList.add('hidden');
+        }
+
+        function deleteCat(catName) {
+            if (!deletedList.some(d => d.toLowerCase() === catName.toLowerCase())) {
+                deletedList.push(catName);
+                setStoredList(deletedStorageKey, deletedList);
+            }
+            customList = customList.filter(c => c.toLowerCase() !== catName.toLowerCase());
+            setStoredList(customStorageKey, customList);
+
+            if (input.value && input.value.trim().toLowerCase() === catName.toLowerCase()) {
+                input.value = '';
+            }
+
+            render(input.value);
         }
 
         input.addEventListener('focus', () => render(input.value));
         input.addEventListener('input', () => render(input.value));
         input.addEventListener('click', () => render(input.value));
-        input.addEventListener('blur', () => {
-            setTimeout(() => dropdown.classList.add('hidden'), 200);
+
+        document.addEventListener('click', (e) => {
+            if (!input.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
         });
     }
 
     window.addEventListener('DOMContentLoaded', () => {
         initSignatureCanvas();
+        setupMaterialCombobox('material_name', 'materialSuggestions', @json($materials));
         setupCategoryCombobox('category', 'categoryReceiptDropdown', @json($categories));
-        const matNameInput = document.getElementById('material_name');
-        if (matNameInput && matNameInput.value) {
-            onMaterialNameInput(matNameInput.value);
-        } else {
-            showNewMaterialFields(true);
-        }
     });
 </script>
 @endsection
