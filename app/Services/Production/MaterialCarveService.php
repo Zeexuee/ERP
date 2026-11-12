@@ -21,6 +21,12 @@ class MaterialCarveService
             $sourceMaterial = Material::findOrFail($data['source_material_id']);
             $initialWeight = (float) $data['initial_weight'];
 
+            if ($sourceMaterial->category !== 'Bahan Potong Ukir') {
+                throw new InvalidArgumentException(
+                    "Bahan baku utama untuk potong ukir harus berkategori Bahan Potong Ukir."
+                );
+            }
+
             if ($sourceMaterial->stock_quantity < $initialWeight) {
                 throw new InvalidArgumentException(
                     "Stok bahan mentah {$sourceMaterial->name} tidak mencukupi (Tersedia: {$sourceMaterial->stock_quantity} {$sourceMaterial->unit}, Dibutuhkan: {$initialWeight} {$sourceMaterial->unit})."

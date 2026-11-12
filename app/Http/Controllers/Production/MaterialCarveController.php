@@ -52,8 +52,8 @@ class MaterialCarveController extends Controller
      */
     public function create(): View
     {
-        // Ambil semua bahan baku untuk pilihan bahan mentah dan bahan target hasil potong ukir
-        $materials = Material::orderBy('name')->get();
+        // Hanya tampilkan bahan baku gudang berkategori 'Bahan Potong Ukir' dengan stok > 0 yang bebas proses aktif
+        $materials = Material::availableForCarve()->orderBy('name')->get();
 
         return view('production.carves.create', compact('materials'));
     }
@@ -63,9 +63,26 @@ class MaterialCarveController extends Controller
      */
     public function store(Request $request, MaterialCarveService $service): RedirectResponse
     {
+        $sourceMaterialRule = [
+            'required',
+            'exists:materials,id',
+            function ($attribute, $value, $fail) {
+                $material = Material::find($value);
+                if (! $material) {
+                    return;
+                }
+                if ($material->category !== 'Bahan Potong Ukir') {
+                    $fail('Hanya bahan baku berkategori Bahan Potong Ukir yang dapat diinisiasi untuk proses potong ukir.');
+                } elseif ($material->isInActiveProcess()) {
+                    $processName = $material->getActiveProcessName() ?? 'lain';
+                    $fail("Bahan baku ini sedang dalam proses {$processName} dan belum selesai.");
+                }
+            },
+        ];
+
         if ($request->has('items') && is_array($request->input('items'))) {
             $validated = $request->validate([
-                'source_material_id' => ['required', 'exists:materials,id'],
+                'source_material_id' => $sourceMaterialRule,
                 'initial_weight' => ['required', 'numeric', 'min:0.01'],
                 'dried_weight' => ['required', 'numeric', 'min:0.01'],
                 'carve_date' => ['required', 'date'],
@@ -102,7 +119,7 @@ class MaterialCarveController extends Controller
 
         // Mode Inisiasi Murni (Tanpa pembagian hasil)
         $validated = $request->validate([
-            'source_material_id' => ['required', 'exists:materials,id'],
+            'source_material_id' => $sourceMaterialRule,
             'initial_weight' => ['required', 'numeric', 'min:0.01'],
             'carve_date' => ['required', 'date'],
             'pic_name' => ['required', 'string', 'max:100'],

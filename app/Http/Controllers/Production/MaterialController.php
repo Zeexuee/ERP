@@ -44,7 +44,16 @@ class MaterialController extends Controller
             $query->where('category', $category);
         }
 
-        $materials = $query->with(['latestReceipt', 'recountLogs', 'dryingLogs'])->orderBy('name')->paginate(15)->withQueryString();
+        $materials = $query->with([
+            'latestReceipt',
+            'recountLogs',
+            'dryingLogs',
+            'receipts',
+            'sortBatches',
+            'sortResultItems.sortBatch.sourceMaterial',
+            'carveBatches',
+            'carveResultItems.carveBatch.sourceMaterial',
+        ])->orderBy('name')->paginate(15)->withQueryString();
 
         $categories = Material::getAllCategories();
 

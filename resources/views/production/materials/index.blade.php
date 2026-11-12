@@ -152,7 +152,8 @@
                             </td>
                             <td class="py-3.5 px-3.5 text-center whitespace-nowrap">
                                 @php
-                                    $processCount = $mat->dryingLogs->count();
+                                    $processLogs = $mat->getAllProcessLogs();
+                                    $processCount = $processLogs->count();
                                 @endphp
                                 <button
                                     type="button"
@@ -299,13 +300,17 @@
                                                 <a href="{{ route('production.dryings.create', ['material_id' => $mat->id]) }}" class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-sans text-[10px] font-bold hover:bg-slate-800 transition">
                                                     + Jemur Bahan Ini
                                                 </a>
+                                            @elseif($mat->category === 'Bahan Potong Ukir')
+                                                <a href="{{ route('production.carves.create') }}" class="px-2.5 py-1 rounded-lg bg-slate-900 text-white font-sans text-[10px] font-bold hover:bg-slate-800 transition">
+                                                    + Inisiasi Potong Ukir
+                                                </a>
                                             @endif
                                         </div>
                                     </div>
 
                                     @if($processCount === 0)
                                         <p class="text-[11px] font-medium italic text-slate-500 py-3 text-center">
-                                            Belum ada catatan riwayat proses (penjemuran/pengolahan) pada bahan baku ini.
+                                            Belum ada catatan riwayat proses (barang masuk/jemur/sortir/potong ukir) pada bahan baku ini.
                                         </p>
                                     @else
                                         <div class="overflow-x-auto">
@@ -313,10 +318,9 @@
                                                 <thead>
                                                     <tr class="bg-slate-100 text-slate-800 font-bold uppercase text-[9px] tracking-wider border-b border-slate-200">
                                                         <th class="py-2.5 px-3">Jenis Proses</th>
+                                                        <th class="py-2.5 px-3">No. Referensi</th>
                                                         <th class="py-2.5 px-3">Waktu Pelaksanaan</th>
-                                                        <th class="py-2.5 px-3 text-center">Lama Jemur</th>
-                                                        <th class="py-2.5 px-3 text-right">Berat Sebelum</th>
-                                                        <th class="py-2.5 px-3 text-right">Berat Sesudah</th>
+                                                        <th class="py-2.5 px-3">Rincian / Kuantitas</th>
                                                         <th class="py-2.5 px-3 text-center">Status</th>
                                                         <th class="py-2.5 px-3">Penanggung Jawab</th>
                                                         <th class="py-2.5 px-3">Catatan</th>
@@ -324,60 +328,42 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody class="divide-y divide-slate-200">
-                                                    @foreach($mat->dryingLogs as $dLog)
+                                                    @foreach($processLogs as $pLog)
                                                         <tr class="hover:bg-slate-50 transition">
-                                                            <td class="py-2.5 px-3">
-                                                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900 text-white">
-                                                                    Jemur Bahan
+                                                            <td class="py-2.5 px-3 whitespace-nowrap">
+                                                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold {{ $pLog['badge'] }}">
+                                                                    {{ $pLog['type'] }}
                                                                 </span>
                                                             </td>
-                                                            <td class="py-2.5 px-3 text-slate-800 font-mono text-[10px]">
-                                                                <div>Mulai: {{ $dLog->start_date->format('d/m/Y') }} {{ $dLog->start_time ? '(' . $dLog->start_time . ')' : '' }}</div>
-                                                                @if($dLog->end_date)
-                                                                    <div class="text-slate-600 text-[10px] mt-0.5">Selesai: {{ $dLog->end_date->format('d/m/Y') }} {{ $dLog->end_time ? '(' . $dLog->end_time . ')' : '' }}</div>
+                                                            <td class="py-2.5 px-3 font-mono font-bold text-slate-900 whitespace-nowrap">
+                                                                {{ $pLog['reference_number'] }}
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-slate-800 font-mono text-[10px] whitespace-nowrap">
+                                                                {!! $pLog['time_details'] !!}
+                                                            </td>
+                                                            <td class="py-2.5 px-3 text-slate-900 text-xs">
+                                                                <div class="font-mono font-bold">{{ $pLog['weight_summary'] }}</div>
+                                                                @if($pLog['weight_subtext'])
+                                                                    <div class="text-[10px] text-slate-600 font-mono">{{ $pLog['weight_subtext'] }}</div>
                                                                 @endif
                                                             </td>
-                                                            <td class="py-2.5 px-3 text-center font-mono font-bold text-slate-900">
-                                                                @if($dLog->drying_hours !== null)
-                                                                    {{ (float) $dLog->drying_hours }} Jam
-                                                                @else
-                                                                    <span class="text-slate-400">-</span>
-                                                                @endif
+                                                            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                                                                <span class="px-2 py-0.5 rounded-md text-[10px] font-bold {{ $pLog['status_badge'] }}">
+                                                                    {{ $pLog['status'] }}
+                                                                </span>
                                                             </td>
-                                                            <td class="py-2.5 px-3 text-right font-mono font-semibold text-slate-800">
-                                                                {{ number_format($dLog->previous_weight, 2) }} {{ $mat->unit }}
+                                                            <td class="py-2.5 px-3 text-slate-800 text-xs font-medium whitespace-nowrap">
+                                                                {{ $pLog['pic_name'] }}
                                                             </td>
-                                                            <td class="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
-                                                                @if($dLog->new_weight !== null)
-                                                                    {{ number_format($dLog->new_weight, 2) }} {{ $mat->unit }}
-                                                                    @if((float) $dLog->shrinkage_weight > 0)
-                                                                        <span class="block text-[10px] text-slate-600 font-mono font-normal">-{{ number_format($dLog->shrinkage_weight, 2) }} (Susut)</span>
-                                                                    @endif
-                                                                @else
-                                                                    <span class="text-slate-400 font-normal">-</span>
-                                                                @endif
+                                                            <td class="py-2.5 px-3 text-slate-600 text-xs max-w-xs truncate" title="{{ $pLog['notes'] }}">
+                                                                {{ $pLog['notes'] }}
                                                             </td>
-                                                            <td class="py-2.5 px-3 text-center">
-                                                                @if($dLog->status === 'menunggu')
-                                                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 text-slate-800 border border-slate-300">
-                                                                        Menjemur
-                                                                    </span>
-                                                                @else
-                                                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900 text-white">
-                                                                        Selesai
-                                                                    </span>
-                                                                @endif
-                                                            </td>
-                                                            <td class="py-2.5 px-3 text-slate-800 text-xs font-medium">
-                                                                {{ $dLog->pic_name }}
-                                                            </td>
-                                                            <td class="py-2.5 px-3 text-slate-600 text-xs max-w-xs truncate" title="{{ $dLog->notes }}">
-                                                                {{ $dLog->notes ?: '-' }}
-                                                            </td>
-                                                            <td class="py-2.5 px-3 text-center">
-                                                                @if($dLog->status === 'menunggu')
-                                                                    <a href="{{ route('production.dryings.report.create', $dLog->id) }}" class="px-2.5 py-1 rounded-xl bg-slate-900 text-white font-bold text-[10px] hover:bg-slate-800 shadow-xs transition inline-block">
-                                                                        Lapor
+                                                            <td class="py-2.5 px-3 text-center whitespace-nowrap">
+                                                                @if($pLog['action_url'])
+                                                                    <a href="{{ $pLog['action_url'] }}"
+                                                                        @if(!empty($pLog['action_target_blank'])) target="_blank" @endif
+                                                                        class="px-2.5 py-1 rounded-xl bg-white text-slate-900 border border-slate-300 font-bold text-[10px] hover:bg-slate-100 shadow-xs transition inline-block">
+                                                                        {{ $pLog['action_label'] ?? 'Buka' }}
                                                                     </a>
                                                                 @else
                                                                     <span class="text-slate-400 text-[10px]">Tercatat</span>

@@ -28,6 +28,12 @@
         </div>
     @endif
 
+    @if($materials->isEmpty())
+        <div class="p-4 rounded-2xl bg-white border border-slate-300 text-slate-900 text-xs font-semibold shadow-xs">
+            Tidak ada bahan baku berkategori Bahan Potong Ukir dengan stok tersedia yang siap dipotong ukir. Pastikan bahan baku sudah selesai dari proses aktif lainnya atau input bahan baku berkategori Bahan Potong Ukir baru di gudang.
+        </div>
+    @endif
+
     <form action="{{ route('production.carves.store') }}" method="POST" id="carveInitForm" class="space-y-6">
         @csrf
 
@@ -39,10 +45,10 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">
-                        Bahan Baku Mentah Asal
+                        Bahan Baku Mentah Asal (Khusus Bahan Potong Ukir) <span class="text-slate-900">*</span>
                     </label>
-                    <select name="source_material_id" id="sourceMaterialSelect" class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold" required>
-                        <option value="">Pilih Bahan Baku</option>
+                    <select name="source_material_id" id="sourceMaterialSelect" class="w-full px-3 py-2 rounded-xl apple-input text-xs font-semibold" required {{ $materials->isEmpty() ? 'disabled' : '' }}>
+                        <option value="">{{ $materials->isEmpty() ? 'Tidak ada bahan berkategori Bahan Potong Ukir yang siap' : 'Pilih Bahan Baku' }}</option>
                         @foreach($materials as $mat)
                             <option 
                                 value="{{ $mat->id }}" 
